@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\CustomerController;
 use App\Http\Controllers\Api\V1\ProductController;
+use App\Http\Controllers\Api\V1\PurchaseController;
 use App\Http\Controllers\Api\V1\StockAdjustmentController;
 use App\Http\Controllers\Api\V1\StockMovementController;
 use App\Http\Controllers\Api\V1\SupplierController;
@@ -54,5 +55,10 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::post('stock-adjustments', StockAdjustmentController::class)
             ->middleware('permission:'.Permission::StockAdjust->value)
             ->name('stock-adjustments.store');
+
+        // Purchases: viewing them shows supplier costs, so it needs purchases.create too.
+        Route::middleware('permission:'.Permission::PurchasesCreate->value)->group(function () {
+            Route::apiResource('purchases', PurchaseController::class)->only(['index', 'store', 'show']);
+        });
     });
 });
