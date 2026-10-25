@@ -68,7 +68,7 @@ Every master data table also has `created_by` (nullable, the user who created th
 - `suppliers`: name, contact_person, phone, email, address, deleted_at.
 - `customers`: name, phone (unique when present), address, deleted_at.
 - `products`: category_id, sku (unique), name, description, unit (text label such as "bag"), cost_price, selling_price, reorder_level (integer), deleted_at.
-- `accounts`: name (unique), type (cash, bank, mobile_money), opening_balance, is_active. Accounts are never deleted, only deactivated. `opening_balance` is fixed once the account is created; a wrong opening balance is corrected with an `adjustment` transaction.
+- `accounts`: name (unique), type (cash, bank, mobile_money), opening_balance, is_active. Accounts are never deleted, only deactivated. `opening_balance` may be negative (an account that starts overdrawn) and is fixed once the account is created; a wrong opening balance is corrected with an `adjustment` transaction.
 
 ### Documents
 - `purchases`: number (unique, for example PUR-000123), supplier_id, invoice_number, purchase_date, total_amount, note, status (active, voided), voided_at, voided_by, void_reason, created_by.
@@ -130,7 +130,7 @@ If reports ever become slow, cached columns may be added, but only alongside the
 10. Document numbers are sequential per document type, generated under a lock.
 11. Dates on documents cannot be in the future.
 12. Soft-deleted products cannot be used on new documents.
-13. A category cannot be deleted while any product (including soft-deleted ones) belongs to it (409). Deleting a product is a soft delete, refused with 409 while the product still has stock on hand.
+13. A category cannot be deleted while any product (including soft-deleted ones) belongs to it (409). Deleting a product is a soft delete, refused with 409 while the product still has stock on hand (adjust it to zero first).
 
 ## 9. Core flows
 
@@ -183,7 +183,7 @@ A screen for custom roles is deferred, but nothing in the checks has to change w
 
 ## 12. Operations and quality
 
-- **Tests, written in every phase:** stock rules and concurrency, totals and cents arithmetic, payment status, voiding rules, permissions, validation.
+- **Tests, written in every phase:** stock rules and concurrency, totals and cents arithmetic, payment status, voiding rules, permissions, validation. The regular suite runs on in-memory SQLite. Concurrency tests live in `tests/Concurrency` (Pest group `mysql`) and run against a throwaway MySQL from `docker-compose.yml`, with committed data and real parallel processes; they are skipped when that database is not running.
 - **Verify command** (`php artisan inventory:verify`): recalculates everything from the ledgers and checks that document totals equal the sum of their items, active documents have matching movements and payments within limits, voided documents net to zero, transfer groups sum to zero, and no product has negative stock.
 - **Hosting:** a small cloud server (PHP, MySQL or PostgreSQL, web server, HTTPS) with `APP_DEBUG=false`, a queue-free setup to start with, and a documented update procedure.
 - **Backups:** automated database backups to a separate location, with a tested restore, from the first real use.

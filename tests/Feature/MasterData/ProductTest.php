@@ -2,6 +2,7 @@
 
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\StockMovement;
 
 function productPayload(array $overrides = []): array
 {
@@ -67,6 +68,18 @@ it('searches products by name or sku and filters by category', function () {
     $this->getJson("/api/v1/products?category_id={$cement->category_id}")->assertJsonCount(2, 'data');
 });
 
+it('shows stock calculated from the stock movements', function () {
+    actingAsStaff();
+    $product = Product::factory()->create();
+    $other = Product::factory()->create();
+    StockMovement::factory()->for($product)->create(['quantity' => 10]);
+    StockMovement::factory()->for($product)->create(['quantity' => -3]);
+
+    $this->getJson("/api/v1/products/{$product->id}")->assertJsonPath('data.stock', 7);
+    $this->getJson("/api/v1/products/{$other->id}")->assertJsonPath('data.stock', 0);
+    $this->getJson("/api/v1/products?search={$product->sku}")->assertJsonPath('data.0.stock', 7);
+});
+
 it('lets the owner update a product', function () {
     actingAsOwner();
     $product = Product::factory()->create();
@@ -87,6 +100,29 @@ it('soft-deletes a product and hides it afterwards', function () {
 
     $this->getJson("/api/v1/products/{$product->id}")->assertNotFound();
     $this->getJson('/api/v1/products')->assertJsonCount(0, 'data');
+});
+
+it('refuses to delete a product that still has stock', function () {
+    actingAsOwner();
+    $product = Product::factory()->create();
+    StockMovement::factory()->for($product)->create(['quantity' => 4]);
+
+    $this->deleteJson("/api/v1/products/{$product->id}")
+        ->assertConflict()
+        ->assertExactJson(['message' => 'This product still has 4 in stock. Adjust stock to zero before deleting it.']);
+
+    expect($product->fresh()->trashed())->toBeFalse();
+});
+
+it('deletes a product whose movements net to zero', function () {
+    actingAsOwner();
+    $product = Product::factory()->create();
+    StockMovement::factory()->for($product)->create(['quantity' => 4]);
+    StockMovement::factory()->for($product)->create(['quantity' => -4]);
+
+    $this->deleteJson("/api/v1/products/{$product->id}")->assertNoContent();
+
+    expect($product->fresh()->trashed())->toBeTrue();
 });
 
 it('forbids staff from changing products', function () {

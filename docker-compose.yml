@@ -1,0 +1,20 @@
+# Throwaway MySQL used only by the concurrency tests (SQLite ignores row locks).
+#   docker compose up -d mysql-test
+#   php artisan test --compact --group=mysql
+services:
+  mysql-test:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: inventory_test
+      MYSQL_USER: inventory
+      MYSQL_PASSWORD: secret
+      MYSQL_ROOT_PASSWORD: secret
+    ports:
+      - "33060:3306"
+    tmpfs:
+      - /var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uinventory", "-psecret"]
+      interval: 2s
+      timeout: 3s
+      retries: 30

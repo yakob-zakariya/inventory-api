@@ -1,8 +1,10 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use Tests\ConcurrencyTestCase;
 use Tests\TestCase;
 
 /*
@@ -18,6 +20,15 @@ use Tests\TestCase;
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
     ->in('Feature');
+
+/*
+| Concurrency tests run on MySQL with committed data (DatabaseMigrations), so that
+| separate connections and processes can see the rows and contend for row locks.
+*/
+pest()->extend(ConcurrencyTestCase::class)
+    ->use(DatabaseMigrations::class)
+    ->group('mysql')
+    ->in('Concurrency');
 
 /*
 |--------------------------------------------------------------------------

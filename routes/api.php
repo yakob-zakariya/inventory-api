@@ -6,6 +6,8 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\CustomerController;
 use App\Http\Controllers\Api\V1\ProductController;
+use App\Http\Controllers\Api\V1\StockAdjustmentController;
+use App\Http\Controllers\Api\V1\StockMovementController;
 use App\Http\Controllers\Api\V1\SupplierController;
 use App\Http\Controllers\Api\V1\UserController;
 use Illuminate\Support\Facades\Route;
@@ -46,5 +48,11 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::middleware('permission:'.Permission::AccountsManage->value)->group(function () {
             Route::apiResource('accounts', AccountController::class)->only(['store', 'update']);
         });
+
+        // Stock: anyone logged in can read the ledger; adjustments need stock.adjust.
+        Route::get('stock-movements', [StockMovementController::class, 'index'])->name('stock-movements.index');
+        Route::post('stock-adjustments', StockAdjustmentController::class)
+            ->middleware('permission:'.Permission::StockAdjust->value)
+            ->name('stock-adjustments.store');
     });
 });

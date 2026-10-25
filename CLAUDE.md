@@ -9,6 +9,7 @@ The full design and the reasons behind it are in `docs/design.md`. Read it befor
 - Reset local data: `php artisan migrate:fresh --seed`
 - List routes and their middleware: `php artisan route:list`
 - Check data consistency: `php artisan inventory:verify` (once it exists)
+- Concurrency tests (MySQL in Docker): `docker compose up -d mysql-test`, then `php artisan test --compact --group=mysql`. They are skipped when MySQL is not reachable.
 
 ## Architecture rules (never break these)
 - Stock and money are append-only ledgers (`stock_movements`, `account_transactions`). Never update or delete ledger rows or posted documents.
