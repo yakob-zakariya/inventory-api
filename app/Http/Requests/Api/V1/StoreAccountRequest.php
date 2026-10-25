@@ -29,7 +29,7 @@ class StoreAccountRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255', Rule::unique(Account::class)],
             'type' => ['required', Rule::enum(AccountType::class)],
-            'opening_balance' => ['sometimes', ...Money::rules()],
+            'opening_balance' => ['sometimes', ...Money::signedRules()],
             'is_active' => ['sometimes', 'boolean'],
         ];
     }

@@ -22,6 +22,14 @@ it('defaults the opening balance to zero', function () {
         ->assertJsonPath('data.opening_balance', '0.00');
 });
 
+it('accepts a negative opening balance for an overdrawn account', function () {
+    actingAsOwner();
+
+    $this->postJson('/api/v1/accounts', ['name' => 'Overdraft', 'type' => 'bank', 'opening_balance' => '-250.75'])
+        ->assertCreated()
+        ->assertJsonPath('data.opening_balance', '-250.75');
+});
+
 it('lets the owner rename and deactivate an account', function () {
     actingAsOwner();
     $account = Account::factory()->create();
@@ -89,6 +97,5 @@ it('validates a new account', function (array $payload, string $field) {
     'missing name' => [['type' => 'cash'], 'name'],
     'duplicate name' => [['name' => 'Main cash', 'type' => 'cash'], 'name'],
     'unknown type' => [['name' => 'A', 'type' => 'crypto'], 'type'],
-    'negative opening balance' => [['name' => 'A', 'type' => 'cash', 'opening_balance' => -5], 'opening_balance'],
     'three decimals' => [['name' => 'A', 'type' => 'cash', 'opening_balance' => '1.005'], 'opening_balance'],
 ]);

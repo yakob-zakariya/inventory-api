@@ -16,4 +16,14 @@ final class Money
     {
         return ['numeric', 'decimal:0,2', 'min:0', 'max:9999999999.99'];
     }
+
+    /**
+     * Validation rules for an amount that may be negative, with at most two decimal places.
+     *
+     * @return list<string>
+     */
+    public static function signedRules(): array
+    {
+        return ['numeric', 'decimal:0,2', 'min:-9999999999.99', 'max:9999999999.99'];
+    }
 }

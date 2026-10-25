@@ -68,7 +68,7 @@ Every master data table also has `created_by` (nullable, the user who created th
 - `suppliers`: name, contact_person, phone, email, address, deleted_at.
 - `customers`: name, phone (unique when present), address, deleted_at.
 - `products`: category_id, sku (unique), name, description, unit (text label such as "bag"), cost_price, selling_price, reorder_level (integer), deleted_at.
-- `accounts`: name (unique), type (cash, bank, mobile_money), opening_balance, is_active. Accounts are never deleted, only deactivated. `opening_balance` is fixed once the account is created; a wrong opening balance is corrected with an `adjustment` transaction.
+- `accounts`: name (unique), type (cash, bank, mobile_money), opening_balance, is_active. Accounts are never deleted, only deactivated. `opening_balance` may be negative (an account that starts overdrawn) and is fixed once the account is created; a wrong opening balance is corrected with an `adjustment` transaction.
 
 ### Documents
 - `purchases`: number (unique, for example PUR-000123), supplier_id, invoice_number, purchase_date, total_amount, note, status (active, voided), voided_at, voided_by, void_reason, created_by.
