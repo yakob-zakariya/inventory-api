@@ -11,6 +11,8 @@ use App\Models\Customer;
 use App\Models\Product;
 use App\Models\Supplier;
 use App\Models\User;
+use App\Services\PurchaseRecorder;
+use App\Services\SaleRecorder;
 use App\Services\StockLedger;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -35,7 +37,7 @@ class DatabaseSeeder extends Seeder
     }
 
     /**
-     * A few categories, products with opening stock, a supplier, a customer and accounts to try the API with.
+     * A few categories, products with opening stock, a supplier, a customer, accounts, a purchase and two sales to try the API with.
      */
     private function seedDemoMasterData(): void
     {
@@ -70,11 +72,37 @@ class DatabaseSeeder extends Seeder
             }
         });
 
-        Supplier::factory()->create(['name' => 'Demo Cement Supplier']);
-        Customer::factory()->create(['name' => 'Demo Credit Customer']);
+        $supplier = Supplier::factory()->create(['name' => 'Demo Cement Supplier']);
+        $customer = Customer::factory()->create(['name' => 'Demo Credit Customer']);
 
-        Account::factory()->create(['name' => 'Cash drawer', 'type' => AccountType::Cash, 'opening_balance' => '5000.00']);
-        Account::factory()->create(['name' => 'Bank', 'type' => AccountType::Bank, 'opening_balance' => '20000.00']);
+        $cash = Account::factory()->create(['name' => 'Cash drawer', 'type' => AccountType::Cash, 'opening_balance' => '5000.00']);
+        $bank = Account::factory()->create(['name' => 'Bank', 'type' => AccountType::Bank, 'opening_balance' => '20000.00']);
+
+        [$cement, $nails, $paint] = $products->all();
+
+        // A purchase on partial credit from the supplier.
+        app(PurchaseRecorder::class)->record([
+            'supplier_id' => $supplier->id,
+            'invoice_number' => 'INV-1001',
+            'items' => [['product_id' => $cement->id, 'quantity' => 20, 'unit_cost' => '640.00']],
+            'payments' => [['account_id' => $bank->id, 'amount' => '5000.00']],
+        ]);
+
+        // A walk-in sale, paid in full.
+        app(SaleRecorder::class)->record([
+            'items' => [
+                ['product_id' => $cement->id, 'quantity' => 2],
+                ['product_id' => $paint->id, 'quantity' => 1],
+            ],
+            'payments' => [['account_id' => $cash->id, 'amount' => '2540.00']],
+        ]);
+
+        // A credit sale to a registered customer.
+        app(SaleRecorder::class)->record([
+            'customer_id' => $customer->id,
+            'items' => [['product_id' => $nails->id, 'quantity' => 5, 'unit_price' => '145.00']],
+            'payments' => [['account_id' => $cash->id, 'amount' => '200.00']],
+        ]);
     }
 
     /**
