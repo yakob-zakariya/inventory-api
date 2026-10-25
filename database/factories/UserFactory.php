@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\Role;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
@@ -41,5 +42,21 @@ class UserFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
         ]);
+    }
+
+    /**
+     * Give the user the owner role. Requires the roles to be seeded.
+     */
+    public function owner(): static
+    {
+        return $this->afterCreating(fn (User $user) => $user->assignRole(Role::Owner->value));
+    }
+
+    /**
+     * Give the user the staff role. Requires the roles to be seeded.
+     */
+    public function staff(): static
+    {
+        return $this->afterCreating(fn (User $user) => $user->assignRole(Role::Staff->value));
     }
 }
