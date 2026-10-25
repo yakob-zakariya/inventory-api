@@ -1,0 +1,216 @@
+# Design Document: Inventory, Sales and Money Management API
+
+Status: v1 design (single-tenant), agreed before implementation. Update this file when a decision changes.
+
+## 1. Overview
+
+A backend API (Laravel 13, Sanctum tokens) for a small trading shop. It tracks products and stock, purchases from suppliers, sales to customers, and the money moving through the shop's accounts, including credit in both directions.
+
+It is a lightweight ERP for a trading business: inventory, purchasing, sales, and accounts payable and receivable.
+
+## 2. Deployment model and launch plan
+
+- **One deployment per shop.** Each shop gets its own copy of the app and its own database. There is no tenant concept in the code.
+- **Hosted on a small cloud server** run by the developer (the family shop first), not on a shop PC. The shop only needs a browser or phone and an internet connection.
+- Online-only. Connectivity and power are reliable for the target shops, so no offline sync in v1.
+- The API comes first. A web or mobile client is built on top of it later. A mobile-only app without a backend is deliberately not pursued: a single phone holds a single copy of the data, so a second device or user would need syncing, and a lost phone would lose the records.
+- Multi-tenancy is revisited only when real shops are waiting for it. To keep that change manageable, keep the code clean: Form Requests for validation, Eloquent models for data access, no scattered raw queries, no hard-coded assumptions about a single shop beyond the deployment itself.
+
+## 3. Scope of v1
+
+In scope:
+
+- Master data: categories, suppliers, customers, products, accounts.
+- Stock ledger with adjustments.
+- Purchases and sales with items, document numbers, and stock rules.
+- Partial payments on purchases and sales (credit in both directions).
+- Expenses, transfers between accounts, owner deposits and withdrawals, and reconciliation adjustments.
+- Voiding of documents and payments.
+- Reports: stock, amounts owed to suppliers, amounts owed by customers, account balances, cash flow, simple profit.
+
+Out of scope for v1 (possible later): multi-tenancy, payroll or employee records, expense categories, customer returns and refunds workflow, due dates and credit limits, interest, costing methods such as weighted average, offline mode, custom roles, subscription billing, mobile-only app.
+
+## 4. Key decisions
+
+1. **Ledgers, not edited numbers.** Stock and money are append-only ledgers. Stock, balances, paid amounts, and statuses are always calculated, never stored.
+2. **Corrections by reversal.** Nothing financial is edited or deleted. A mistake is voided with a required reason, which adds reversing entries, and the correct entry is recorded afterwards. Only non-financial fields (notes, invoice number) may be edited directly.
+3. **Whole-item quantities.** Quantities are integers. Money is decimal(12,2) and totals are computed in whole cents to avoid floating-point errors.
+4. **Prices are snapshots.** Unit cost and unit price are copied onto document items, so history never changes when prices change.
+5. **Single-tenant, one deployment per shop.** Simpler to build, test, and reason about, and enough for the first real shop. Multi-tenancy is a later decision.
+6. **Permissions, not roles, in code, using spatie/laravel-permission.** Code checks named permissions (for example `sales.void`). Roles and permissions live in the database, created by a seeder. v1 ships with fixed roles (owner, staff); a screen for custom roles can be added later without changing any permission check.
+7. **Credit needs identity.** Credit sales are only allowed for registered customers. Walk-in sales must be paid in full when the sale is created.
+8. **Partial payments are allowed.** A document can have many payments. Its status is derived from them.
+9. **Account balances reflect reality.** The money ledger covers payments, expenses (including salaries, which are just expenses with a reason), transfers, owner entries, and reconciliation adjustments.
+10. **Negative balances are flagged, not blocked.** Shops forget to record entries, and blocking would frustrate them. A negative balance is shown as a warning in reports.
+11. **Fail-safe operations.** Every multi-row write runs in a database transaction. Operations that depend on current stock or balances lock the rows involved.
+
+## 5. Conventions
+
+- API prefix `/api/v1`. JSON only (clients send `Accept: application/json`).
+- Validation in Form Requests. Output through API Resources. Controllers stay thin.
+- Every record that a user creates stores `created_by`.
+- Master data uses soft deletes. Documents and ledger rows are never deleted.
+- Status codes: 401 not logged in, 403 not allowed, 404 not found, 409 conflict with current state, 422 validation or business-rule failure.
+- Database: MySQL or PostgreSQL (confirm in phase 1). Row locking is required; SQLite ignores it, so concurrency tests must not run on SQLite.
+
+## 6. Data model
+
+Timestamps are on every table.
+
+### Users
+- `users`: name, email (unique), password. There is no role column: roles come from spatie/laravel-permission.
+- Spatie tables (`roles`, `permissions`, `model_has_roles`, `model_has_permissions`, `role_has_permissions`) are created by the package's migration.
+
+### Master data
+- `categories`: name (unique), description.
+- `suppliers`: name, contact_person, phone, email, address, deleted_at.
+- `customers`: name, phone (unique when present), address, deleted_at.
+- `products`: category_id, sku (unique), name, description, unit (text label such as "bag"), cost_price, selling_price, reorder_level (integer), deleted_at.
+- `accounts`: name (unique), type (cash, bank, mobile_money), opening_balance, is_active.
+
+### Documents
+- `purchases`: number (unique, for example PUR-000123), supplier_id, invoice_number, purchase_date, total_amount, note, status (active, voided), voided_at, voided_by, void_reason, created_by.
+- `purchase_items`: purchase_id, product_id, quantity, unit_cost.
+- `sales`: number (SAL-000123), customer_id (nullable), sale_date, total_amount, note, status, voided_at, voided_by, void_reason, created_by.
+- `sale_items`: sale_id, product_id, quantity, unit_price, unit_cost (snapshot of the product's cost at the time of sale).
+- `document_sequences`: type (unique), last_number. One row per document type (purchase, sale). To number a new document, lock its row inside the same transaction, add 1 to `last_number`, and format the result (for example SAL-000204). A rollback also rolls back the counter, so numbers have no gaps.
+
+### Ledgers (append-only)
+- `stock_movements`: product_id, type (purchase, sale, adjustment, reversal), quantity (signed: positive in, negative out), reference (polymorphic, nullable: purchase or sale), note, created_by.
+- `account_transactions`: account_id, type (sale_payment, purchase_payment, expense, transfer_in, transfer_out, owner_deposit, owner_withdrawal, adjustment, reversal), amount (signed: positive money in, negative money out), transaction_date, note, receipt_reference, reference (polymorphic, nullable: purchase or sale), transfer_group (uuid, nullable), reverses_transaction_id (nullable), created_by.
+  - `note` is required for expense, adjustment, and reversal (the reason).
+
+Register short morph aliases (`purchase`, `sale`) with `Relation::morphMap()`, not `enforceMorphMap()`, which breaks Sanctum's token ownership lookup unless `User` is mapped too.
+
+### Entity relationships
+
+```mermaid
+erDiagram
+    CATEGORIES ||--o{ PRODUCTS : "groups"
+    SUPPLIERS ||--o{ PURCHASES : "supplies"
+    CUSTOMERS |o--o{ SALES : "buys"
+    PURCHASES ||--|{ PURCHASE_ITEMS : "contains"
+    SALES ||--|{ SALE_ITEMS : "contains"
+    PRODUCTS ||--o{ PURCHASE_ITEMS : "bought as"
+    PRODUCTS ||--o{ SALE_ITEMS : "sold as"
+    PRODUCTS ||--o{ STOCK_MOVEMENTS : "tracked by"
+    PURCHASES |o--o{ STOCK_MOVEMENTS : "causes"
+    SALES |o--o{ STOCK_MOVEMENTS : "causes"
+    ACCOUNTS ||--o{ ACCOUNT_TRANSACTIONS : "records"
+    PURCHASES |o--o{ ACCOUNT_TRANSACTIONS : "paid by"
+    SALES |o--o{ ACCOUNT_TRANSACTIONS : "paid by"
+```
+
+## 7. Derived values (never stored)
+
+- Product stock = sum of `stock_movements.quantity` for the product.
+- Account balance = `opening_balance` + sum of `account_transactions.amount` for the account.
+- Sale paid amount = sum of `amount` on its payment and reversal rows. Purchase paid amount = minus the sum (purchase payments are money out).
+- Balance due = document total - paid amount.
+- Payment status: unpaid (paid is zero), partial (between zero and total), paid (equals total).
+- Supplier payable = sum of balance due on the supplier's active purchases.
+- Customer receivable = sum of balance due on the customer's active sales.
+- Simple profit = sum over sale items of (unit_price - unit_cost) x quantity, minus net expenses, for active documents in a period.
+
+If reports ever become slow, cached columns may be added, but only alongside the verify command (section 12) that checks them against the ledgers.
+
+## 8. Business rules
+
+1. Stock never goes negative. Sales, negative adjustments, and voids that remove stock check current stock while holding a lock on the product rows, locked in a consistent order (by id) to avoid deadlocks.
+2. A sale that is not fully paid when created requires a customer. Walk-in sales must be paid in full.
+3. A payment cannot exceed the balance due and cannot be recorded against a voided document.
+4. A document can be voided only if its net payments are zero (any payments must be voided first) and the reversal passes the stock rule.
+5. Voiding requires a reason. The system records who voided it and when, and adds reversing stock movements. Voided documents remain visible, marked as voided, and are excluded from totals and reports.
+6. A wrong ledger entry (payment, expense, owner entry) is corrected by a reversal row that points to the original and has the opposite amount. Transfers are reversed as a pair.
+7. A transfer needs two different accounts and always creates its two rows together.
+8. Item product ids within one document must be distinct. Quantities are at least 1.
+9. Prices and costs are copied to the items at creation.
+10. Document numbers are sequential per document type, generated under a lock.
+11. Dates on documents cannot be in the future.
+12. Soft-deleted products cannot be used on new documents.
+13. Categories and products cannot be deleted while other records depend on them (409).
+
+## 9. Core flows
+
+**Purchase with partial payment.** One request creates the purchase, its items, stock movements (+quantity per item), and optional payment rows, in one transaction. The server computes the total; the client never sends it.
+
+**Credit sale.** Same shape as a purchase, with stock check and lock first. If the sum of initial payments is less than the total, a customer is required. The customer's receivable is derived.
+
+**Later payment.** A new `sale_payment` or `purchase_payment` row against an existing document, within the balance due.
+
+**Void a sale.** Requires a reason and no active payments. Marks the sale voided and adds positive reversal stock movements. The receivable disappears because the document is excluded.
+
+**Wrong payment.** Add a reversal row pointing at the original; then record the correct payment.
+
+**Expense.** A negative `expense` row on an account with a required reason. Salaries are expenses whose reason says so.
+
+**Transfer.** Two rows in one transaction sharing a `transfer_group`: negative on the source, positive on the destination.
+
+**Reconciliation.** Count the real cash or bank balance, then record the difference as an `adjustment` with a reason.
+
+**Stock adjustment.** A signed `adjustment` stock movement with a required reason. Opening stock is a positive adjustment.
+
+## 10. API outline
+
+Prefix `/api/v1`. All routes except login need a Sanctum token. Permissions are checked by name.
+
+- Auth: `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`.
+- Users: list and create (`users.manage`). There is no public registration.
+- Master data CRUD: categories, suppliers, customers, products, accounts.
+- Stock: `GET /stock-movements` (filters: product, type), `POST /stock-adjustments`.
+- Purchases: `GET /purchases`, `GET /purchases/{id}`, `POST /purchases`, `POST /purchases/{id}/void`.
+- Sales: `GET /sales`, `GET /sales/{id}`, `POST /sales`, `POST /sales/{id}/void`.
+- Money: `GET /account-transactions`, `POST /payments` (against a document), `POST /expenses`, `POST /transfers`, `POST /owner-entries`, `POST /account-adjustments`, `POST /account-transactions/{id}/reverse`.
+- Reports: stock levels and low stock, supplier payables, customer receivables, account balances, cash flow, profit.
+
+## 11. Permissions (v1 proposal)
+
+Named permissions: `products.manage`, `stock.adjust`, `purchases.create`, `purchases.void`, `sales.create`, `sales.void`, `payments.record`, `payments.void`, `expenses.record`, `accounts.manage`, `reports.view`, `users.manage`.
+
+- **owner:** all permissions.
+- **staff (for shops with more than one user):** view master data, `sales.create`, `payments.record` for sales. No voiding, purchases, expenses, accounts, or reports.
+
+Implementation with spatie/laravel-permission:
+- A seeder creates the permissions and the two roles, so every environment gets the same set.
+- Routes and code check permissions (`permission:` middleware, `$user->can('sales.void')`), never role names.
+- `GET /auth/me` returns the user's permission names so a frontend can show or hide actions. The backend still enforces every rule.
+- After changing permissions, run `php artisan permission:cache-reset`.
+- The package's teams feature is not used (single-tenant).
+
+A screen for custom roles is deferred, but nothing in the checks has to change when it is added.
+
+## 12. Operations and quality
+
+- **Tests, written in every phase:** stock rules and concurrency, totals and cents arithmetic, payment status, voiding rules, permissions, validation.
+- **Verify command** (`php artisan inventory:verify`): recalculates everything from the ledgers and checks that document totals equal the sum of their items, active documents have matching movements and payments within limits, voided documents net to zero, transfer groups sum to zero, and no product has negative stock.
+- **Hosting:** a small cloud server (PHP, MySQL or PostgreSQL, web server, HTTPS) with `APP_DEBUG=false`, a queue-free setup to start with, and a documented update procedure.
+- **Backups:** automated database backups to a separate location, with a tested restore, from the first real use.
+- **API documentation:** generated from the code (for example Scramble).
+- **Seeders and factories** for realistic demo data. A clean `.env.example`. A README that links to this document.
+- **CI:** a pipeline that runs the tests on every push.
+
+## 13. Build plan
+
+Same repository: tag the current state `prototype-v1`, work on a `v2` branch, rewrite migrations from scratch (no production data to protect), reuse controllers and patterns that fit.
+
+1. **Foundation:** database choice, users, spatie/laravel-permission with the permissions and roles seeder, Sanctum login, base response and error conventions, a command to create the owner, first feature tests.
+2. **Master data:** categories, suppliers, customers, products, accounts.
+3. **Stock ledger and adjustments.**
+4. **Purchases and sales:** numbering, nested items, stock rules.
+5. **Money ledger:** payments against documents, expenses, transfers, owner entries, reconciliation.
+6. **Voiding:** documents and ledger entries.
+7. **Reports.**
+8. **Professional finish:** API docs, README, verify command, backups, cloud deployment, CI.
+
+Each phase ends with passing tests and a commit before the next begins.
+
+## 14. Open questions and later work
+
+- Multi-tenancy, when real shops are waiting for it.
+- Costing method for profit (current: product cost at time of sale; later: weighted average).
+- Expense categories (small upgrade: a nullable category on expenses).
+- Returns and refunds workflow, due dates, credit limits.
+- Employees and payroll.
+- A screen for custom roles (the permission system already supports it).
+- Web or mobile client on top of the API.
+- Subscription billing and self-service signup (only relevant with multi-tenancy).
