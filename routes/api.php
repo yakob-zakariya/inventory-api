@@ -2,6 +2,7 @@
 
 use App\Enums\Permission;
 use App\Http\Controllers\Api\V1\AccountController;
+use App\Http\Controllers\Api\V1\AccountTransactionController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\CustomerController;
@@ -67,5 +68,10 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::post('sales', [SaleController::class, 'store'])
             ->middleware('permission:'.Permission::SalesCreate->value)
             ->name('sales.store');
+
+        // Money ledger and reports.
+        Route::middleware('permission:'.Permission::ReportsView->value)->group(function () {
+            Route::get('account-transactions', [AccountTransactionController::class, 'index'])->name('account-transactions.index');
+        });
     });
 });

@@ -19,6 +19,7 @@ class AccountController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $accounts = Account::query()
+            ->withBalance()
             ->search($request->query('search'))
             ->when($request->boolean('active'), fn ($query) => $query->active())
             ->orderBy('name')

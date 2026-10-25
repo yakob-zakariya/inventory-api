@@ -4,12 +4,14 @@ namespace App\Models;
 
 use App\Enums\AccountType;
 use App\Models\Concerns\RecordsCreator;
+use App\Support\Money;
 use Database\Factories\AccountFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * A place where the shop keeps money. Accounts are deactivated, never deleted,
@@ -41,6 +43,37 @@ class Account extends Model
             'opening_balance' => 'decimal:2',
             'is_active' => 'boolean',
         ];
+    }
+
+    /**
+     * @return HasMany<AccountTransaction, $this>
+     */
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(AccountTransaction::class);
+    }
+
+    /**
+     * Load the sum of each account's transactions with the query, for balanceCents().
+     *
+     * @param  Builder<self>  $query
+     */
+    #[Scope]
+    protected function withBalance(Builder $query): void
+    {
+        $query->withSum('transactions as transactions_sum', 'amount');
+    }
+
+    /**
+     * Current balance: the opening balance plus every transaction, always calculated.
+     */
+    public function balanceCents(): int
+    {
+        $sum = array_key_exists('transactions_sum', $this->attributes)
+            ? $this->attributes['transactions_sum']
+            : $this->transactions()->sum('amount');
+
+        return Money::toCents($this->opening_balance) + Money::toCents($sum ?? 0);
     }
 
     /**

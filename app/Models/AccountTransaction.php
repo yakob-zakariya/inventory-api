@@ -7,6 +7,8 @@ use App\Models\Concerns\RecordsCreator;
 use App\Services\MoneyLedger;
 use Database\Factories\AccountTransactionFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -62,5 +64,19 @@ class AccountTransaction extends Model
     public function reference(): MorphTo
     {
         return $this->morphTo();
+    }
+
+    /**
+     * @param  Builder<self>  $query
+     * @param  array{account_id?: int, type?: string, from?: string, to?: string}  $filters
+     */
+    #[Scope]
+    protected function filter(Builder $query, array $filters): void
+    {
+        $query
+            ->when($filters['account_id'] ?? null, fn (Builder $query, $id) => $query->where('account_id', $id))
+            ->when($filters['type'] ?? null, fn (Builder $query, $type) => $query->where('type', $type))
+            ->when($filters['from'] ?? null, fn (Builder $query, $from) => $query->whereDate('transaction_date', '>=', $from))
+            ->when($filters['to'] ?? null, fn (Builder $query, $to) => $query->whereDate('transaction_date', '<=', $to));
     }
 }
