@@ -51,7 +51,7 @@ Out of scope for v1 (possible later): multi-tenancy, payroll or employee records
 - Every record that a user creates stores `created_by`.
 - Master data uses soft deletes. Documents and ledger rows are never deleted.
 - Status codes: 401 not logged in, 403 not allowed, 404 not found, 409 conflict with current state, 422 validation or business-rule failure.
-- Database: MySQL or PostgreSQL (confirm in phase 1). Row locking is required; SQLite ignores it, so concurrency tests must not run on SQLite.
+- Database: MySQL/MariaDB in production (decided in phase 1). SQLite is used for local development and the regular test suite. Row locking is required; SQLite ignores it, so concurrency tests must run against MySQL.
 
 ## 6. Data model
 
@@ -191,7 +191,7 @@ A screen for custom roles is deferred, but nothing in the checks has to change w
 
 ## 13. Build plan
 
-Same repository: tag the current state `prototype-v1`, work on a `v2` branch, rewrite migrations from scratch (no production data to protect), reuse controllers and patterns that fit.
+The repository starts from a fresh Laravel skeleton. Each phase is built on its own feature branch (for example `phase-1-foundation`) with small commits, and merged into `main` once its tests pass.
 
 1. **Foundation:** database choice, users, spatie/laravel-permission with the permissions and roles seeder, Sanctum login, base response and error conventions, a command to create the owner, first feature tests.
 2. **Master data:** categories, suppliers, customers, products, accounts.
