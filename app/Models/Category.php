@@ -9,12 +9,29 @@ use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable(['name', 'description'])]
 class Category extends Model
 {
     /** @use HasFactory<CategoryFactory> */
     use HasFactory, RecordsCreator;
+
+    /**
+     * @return HasMany<Product, $this>
+     */
+    public function products(): HasMany
+    {
+        return $this->hasMany(Product::class);
+    }
+
+    /**
+     * Whether any product, including soft-deleted ones, belongs to this category.
+     */
+    public function isInUse(): bool
+    {
+        return $this->products()->withTrashed()->exists();
+    }
 
     /**
      * Filter by a partial name match.

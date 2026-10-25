@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Exceptions\ConflictException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\StoreCategoryRequest;
 use App\Http\Requests\Api\V1\UpdateCategoryRequest;
@@ -45,6 +46,10 @@ class CategoryController extends Controller
 
     public function destroy(Category $category): Response
     {
+        if ($category->isInUse()) {
+            throw new ConflictException('This category still has products and cannot be deleted.');
+        }
+
         $category->delete();
 
         return response()->noContent();
