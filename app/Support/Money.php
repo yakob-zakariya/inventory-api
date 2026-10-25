@@ -26,4 +26,26 @@ final class Money
     {
         return ['numeric', 'decimal:0,2', 'min:-9999999999.99', 'max:9999999999.99'];
     }
+
+    /**
+     * Convert an amount ("12.50", 12.5 or 12) to whole cents.
+     *
+     * Validation limits amounts to two decimals and |amount| < 10^10, where rounding
+     * the float to the nearest cent is always exact.
+     */
+    public static function toCents(string|int|float $amount): int
+    {
+        return (int) round((float) $amount * 100);
+    }
+
+    /**
+     * Convert whole cents to the decimal(12,2) string used in storage and JSON.
+     */
+    public static function fromCents(int $cents): string
+    {
+        $sign = $cents < 0 ? '-' : '';
+        $cents = abs($cents);
+
+        return sprintf('%s%d.%02d', $sign, intdiv($cents, 100), $cents % 100);
+    }
 }
