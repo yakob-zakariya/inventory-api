@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\CustomerController;
 use App\Http\Controllers\Api\V1\ProductController;
 use App\Http\Controllers\Api\V1\PurchaseController;
+use App\Http\Controllers\Api\V1\SaleController;
 use App\Http\Controllers\Api\V1\StockAdjustmentController;
 use App\Http\Controllers\Api\V1\StockMovementController;
 use App\Http\Controllers\Api\V1\SupplierController;
@@ -60,5 +61,11 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::middleware('permission:'.Permission::PurchasesCreate->value)->group(function () {
             Route::apiResource('purchases', PurchaseController::class)->only(['index', 'store', 'show']);
         });
+
+        // Sales: anyone logged in can view them (costs are hidden without reports.view).
+        Route::apiResource('sales', SaleController::class)->only(['index', 'show']);
+        Route::post('sales', [SaleController::class, 'store'])
+            ->middleware('permission:'.Permission::SalesCreate->value)
+            ->name('sales.store');
     });
 });
