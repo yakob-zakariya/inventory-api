@@ -9,6 +9,8 @@ The full design and the reasons behind it are in `docs/design.md`. Read it befor
 - Reset local data: `php artisan migrate:fresh --seed`
 - List routes and their middleware: `php artisan route:list`
 - Check data consistency: `php artisan inventory:verify` (once it exists)
+- API docs (local only): `php artisan serve`, then open http://localhost:8000/docs/api. Export for Postman: `php artisan scramble:export`.
+- Manual scenario tests: import `docs/postman/inventory-api.postman_collection.json` into Postman, run `php artisan migrate:fresh --seed`, then Run collection. Add each phase's walkthrough to it.
 - Concurrency tests (MySQL in Docker): `docker compose up -d mysql-test`, then `php artisan test --compact --group=mysql`. They are skipped when MySQL is not reachable.
 
 ## Architecture rules (never break these)
@@ -143,6 +145,16 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 
 - Laravel can be deployed using [Laravel Cloud](https://cloud.laravel.com/), which is the fastest way to deploy and scale production Laravel applications.
 - Activate the `deploying-to-cloud` skill whenever deploying to Laravel Cloud, configuring Cloud environments or resources, using the Cloud CLI, or troubleshooting Cloud deployments.
+
+=== tests rules ===
+
+# Test Enforcement
+
+- Add or update tests for behavior and logic changes when a test provides meaningful regression coverage.
+- Pure copy, styling, and layout-only changes do not require new or updated tests.
+- When test coverage applies, run the affected tests and ensure they pass.
+- Test the changed behavior and its important failure modes, but do not add tests beyond them.
+- Read the `testing-best-practices` skill before writing tests.
 
 === laravel/core rules ===
 
