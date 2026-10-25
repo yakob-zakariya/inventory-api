@@ -1,0 +1,1568 @@
+{
+  "info": {
+    "name": "Inventory API — scenarios",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Run `php artisan migrate:fresh --seed`, start `php artisan serve`, then Run collection from the top. Steps depend on each other. For every endpoint and field, see the generated docs at /docs/api."
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000/api/v1"
+    },
+    {
+      "key": "ownerToken",
+      "value": ""
+    },
+    {
+      "key": "staffToken",
+      "value": ""
+    },
+    {
+      "key": "purchaseId",
+      "value": ""
+    },
+    {
+      "key": "creditSaleId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Setup — log in",
+      "description": "Run `php artisan migrate:fresh --seed` first. These save the tokens for every later request.",
+      "item": [
+        {
+          "name": "Log in as owner",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"owner@example.com\",\n  \"password\": \"password\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.user.roles = [\\\"owner\\\"]\", () => pm.expect(j[\"data\"][\"user\"][\"roles\"]).to.eql([\"owner\"]));",
+                  "pm.collectionVariables.set(\"ownerToken\", j[\"data\"][\"token\"]);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Log in as staff",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"staff@example.com\",\n  \"password\": \"password\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.user.roles = [\\\"staff\\\"]\", () => pm.expect(j[\"data\"][\"user\"][\"roles\"]).to.eql([\"staff\"]));",
+                  "pm.collectionVariables.set(\"staffToken\", j[\"data\"][\"token\"]);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Phase 4 — Purchases and sales",
+      "description": "Seed IDs: products 1 cement, 2 nails, 3 paint; supplier 1; customer 1; accounts 1 cash, 2 bank.",
+      "item": [
+        {
+          "name": "List purchases",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/purchases",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "purchases"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.0.number = \\\"PUR-000001\\\"\", () => pm.expect(j[\"data\"][0][\"number\"]).to.eql(\"PUR-000001\"));",
+                  "pm.test(\"data.0.payment_status = \\\"partial\\\"\", () => pm.expect(j[\"data\"][0][\"payment_status\"]).to.eql(\"partial\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Show purchase PUR-000001",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/purchases/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "purchases",
+                "1"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.total_amount = \\\"12800.00\\\"\", () => pm.expect(j[\"data\"][\"total_amount\"]).to.eql(\"12800.00\"));",
+                  "pm.test(\"data.paid_amount = \\\"5000.00\\\"\", () => pm.expect(j[\"data\"][\"paid_amount\"]).to.eql(\"5000.00\"));",
+                  "pm.test(\"data.balance_due = \\\"7800.00\\\"\", () => pm.expect(j[\"data\"][\"balance_due\"]).to.eql(\"7800.00\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create purchase on part credit",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/purchases",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "purchases"
+              ]
+            },
+            "description": "Total is computed by the server. The product's cost price becomes 950.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"supplier_id\": 1,\n  \"invoice_number\": \"INV-2002\",\n  \"items\": [\n    {\n      \"product_id\": 3,\n      \"quantity\": 10,\n      \"unit_cost\": \"950.00\"\n    }\n  ],\n  \"payments\": [\n    {\n      \"account_id\": 2,\n      \"amount\": \"4000.00\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.number = \\\"PUR-000002\\\"\", () => pm.expect(j[\"data\"][\"number\"]).to.eql(\"PUR-000002\"));",
+                  "pm.test(\"data.total_amount = \\\"9500.00\\\"\", () => pm.expect(j[\"data\"][\"total_amount\"]).to.eql(\"9500.00\"));",
+                  "pm.test(\"data.paid_amount = \\\"4000.00\\\"\", () => pm.expect(j[\"data\"][\"paid_amount\"]).to.eql(\"4000.00\"));",
+                  "pm.test(\"data.payment_status = \\\"partial\\\"\", () => pm.expect(j[\"data\"][\"payment_status\"]).to.eql(\"partial\"));",
+                  "pm.collectionVariables.set(\"purchaseId\", j[\"data\"][\"id\"]);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Product cost follows the last purchase",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products/3",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products",
+                "3"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.cost_price = \\\"950.00\\\"\", () => pm.expect(j[\"data\"][\"cost_price\"]).to.eql(\"950.00\"));",
+                  "pm.test(\"data.stock = 59\", () => pm.expect(j[\"data\"][\"stock\"]).to.eql(59));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Staff cannot see purchases",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/purchases",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "purchases"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 403\", () => pm.response.to.have.status(403));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"message = \\\"This action is unauthorized.\\\"\", () => pm.expect(j[\"message\"]).to.eql(\"This action is unauthorized.\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Staff sells to a walk-in, paid in full",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sales",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sales"
+              ]
+            },
+            "description": "No unit_price sent: the selling price is used. Staff never see unit_cost.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"product_id\": 1,\n      \"quantity\": 3\n    }\n  ],\n  \"payments\": [\n    {\n      \"account_id\": 1,\n      \"amount\": \"2160.00\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.number = \\\"SAL-000003\\\"\", () => pm.expect(j[\"data\"][\"number\"]).to.eql(\"SAL-000003\"));",
+                  "pm.test(\"data.payment_status = \\\"paid\\\"\", () => pm.expect(j[\"data\"][\"payment_status\"]).to.eql(\"paid\"));",
+                  "pm.test(\"data.items.0.unit_price = \\\"720.00\\\"\", () => pm.expect(j[\"data\"][\"items\"][0][\"unit_price\"]).to.eql(\"720.00\"));",
+                  "pm.test(\"data.items.0.unit_cost is not shown\", () => pm.expect(j[\"data\"][\"items\"][0]).to.not.have.property(\"unit_cost\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Credit sale with a negotiated price",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sales",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sales"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_id\": 1,\n  \"items\": [\n    {\n      \"product_id\": 2,\n      \"quantity\": 10,\n      \"unit_price\": \"140.00\"\n    }\n  ],\n  \"payments\": [\n    {\n      \"account_id\": 1,\n      \"amount\": \"400.00\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.number = \\\"SAL-000004\\\"\", () => pm.expect(j[\"data\"][\"number\"]).to.eql(\"SAL-000004\"));",
+                  "pm.test(\"data.total_amount = \\\"1400.00\\\"\", () => pm.expect(j[\"data\"][\"total_amount\"]).to.eql(\"1400.00\"));",
+                  "pm.test(\"data.balance_due = \\\"1000.00\\\"\", () => pm.expect(j[\"data\"][\"balance_due\"]).to.eql(\"1000.00\"));",
+                  "pm.test(\"data.payment_status = \\\"partial\\\"\", () => pm.expect(j[\"data\"][\"payment_status\"]).to.eql(\"partial\"));",
+                  "pm.test(\"data.items.0.unit_cost = \\\"120.00\\\"\", () => pm.expect(j[\"data\"][\"items\"][0][\"unit_cost\"]).to.eql(\"120.00\"));",
+                  "pm.collectionVariables.set(\"creditSaleId\", j[\"data\"][\"id\"]);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Walk-in sale must be paid in full",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sales",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sales"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"product_id\": 1,\n      \"quantity\": 1\n    }\n  ],\n  \"payments\": [\n    {\n      \"account_id\": 1,\n      \"amount\": \"100.00\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 422\", () => pm.response.to.have.status(422));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"message = \\\"A customer is required for a sale that is not fully paid.\\\"\", () => pm.expect(j[\"message\"]).to.eql(\"A customer is required for a sale that is not fully paid.\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cannot sell more than in stock",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sales",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sales"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_id\": 1,\n  \"items\": [\n    {\n      \"product_id\": 3,\n      \"quantity\": 1000\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 422\", () => pm.response.to.have.status(422));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"message = \\\"Not enough stock for PNT-W4: 59 on hand, 1000 requested.\\\"\", () => pm.expect(j[\"message\"]).to.eql(\"Not enough stock for PNT-W4: 59 on hand, 1000 requested.\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Same product twice is rejected",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sales",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sales"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_id\": 1,\n  \"items\": [\n    {\n      \"product_id\": 1,\n      \"quantity\": 1\n    },\n    {\n      \"product_id\": 1,\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 422\", () => pm.response.to.have.status(422));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"errors.items\\\\.1\\\\.product_id.0 = \\\"Each product may appear only once on a document.\\\"\", () => pm.expect(j[\"errors\"][\"items.1.product_id\"][0]).to.eql(\"Each product may appear only once on a document.\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sales of customer 1",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sales?customer_id=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sales"
+              ],
+              "query": [
+                {
+                  "key": "customer_id",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.0.number = \\\"SAL-000004\\\"\", () => pm.expect(j[\"data\"][0][\"number\"]).to.eql(\"SAL-000004\"));",
+                  "pm.test(\"data.1.number = \\\"SAL-000002\\\"\", () => pm.expect(j[\"data\"][1][\"number\"]).to.eql(\"SAL-000002\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Phase 5 — Money",
+      "description": "Balances are calculated from the ledger, never stored.",
+      "item": [
+        {
+          "name": "Owner sees account balances",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.0.name = \\\"Bank\\\"\", () => pm.expect(j[\"data\"][0][\"name\"]).to.eql(\"Bank\"));",
+                  "pm.test(\"data.0.balance = \\\"11000.00\\\"\", () => pm.expect(j[\"data\"][0][\"balance\"]).to.eql(\"11000.00\"));",
+                  "pm.test(\"data.1.balance = \\\"10300.00\\\"\", () => pm.expect(j[\"data\"][1][\"balance\"]).to.eql(\"10300.00\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Staff sees accounts without balances",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.0.balance is not shown\", () => pm.expect(j[\"data\"][0]).to.not.have.property(\"balance\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Staff collects the rest of the credit sale",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "payments"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"document_type\": \"sale\",\n  \"document_id\": {{creditSaleId}},\n  \"account_id\": 1,\n  \"amount\": \"1000.00\",\n  \"receipt_reference\": \"RCPT-1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.payment_status = \\\"paid\\\"\", () => pm.expect(j[\"data\"][\"payment_status\"]).to.eql(\"paid\"));",
+                  "pm.test(\"data.balance_due = \\\"0.00\\\"\", () => pm.expect(j[\"data\"][\"balance_due\"]).to.eql(\"0.00\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Staff cannot pay a supplier",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "payments"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"document_type\": \"purchase\",\n  \"document_id\": {{purchaseId}},\n  \"account_id\": 2,\n  \"amount\": \"100.00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 403\", () => pm.response.to.have.status(403));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"message = \\\"This action is unauthorized.\\\"\", () => pm.expect(j[\"message\"]).to.eql(\"This action is unauthorized.\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Owner pays the supplier",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "payments"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"document_type\": \"purchase\",\n  \"document_id\": {{purchaseId}},\n  \"account_id\": 2,\n  \"amount\": \"5500.00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.payment_status = \\\"paid\\\"\", () => pm.expect(j[\"data\"][\"payment_status\"]).to.eql(\"paid\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Payment above the balance due is refused",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "payments"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"document_type\": \"purchase\",\n  \"document_id\": 1,\n  \"account_id\": 2,\n  \"amount\": \"8000.00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 422\", () => pm.response.to.have.status(422));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"message = \\\"Payment (8000.00) exceeds the balance due on PUR-000001 (7800.00).\\\"\", () => pm.expect(j[\"message\"]).to.eql(\"Payment (8000.00) exceeds the balance due on PUR-000001 (7800.00).\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Record an expense",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/expenses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "expenses"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_id\": 1,\n  \"amount\": \"1500.00\",\n  \"note\": \"October rent\",\n  \"receipt_reference\": \"RENT-10\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.type = \\\"expense\\\"\", () => pm.expect(j[\"data\"][\"type\"]).to.eql(\"expense\"));",
+                  "pm.test(\"data.amount = \\\"-1500.00\\\"\", () => pm.expect(j[\"data\"][\"amount\"]).to.eql(\"-1500.00\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Expense needs a reason",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/expenses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "expenses"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_id\": 1,\n  \"amount\": \"10.00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 422\", () => pm.response.to.have.status(422));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"errors.note.0 = \\\"A reason is required for every expense.\\\"\", () => pm.expect(j[\"errors\"][\"note\"][0]).to.eql(\"A reason is required for every expense.\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Transfer cash to bank",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transfers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transfers"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"from_account_id\": 1,\n  \"to_account_id\": 2,\n  \"amount\": \"3000.00\",\n  \"note\": \"Bank deposit\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.0.type = \\\"transfer_out\\\"\", () => pm.expect(j[\"data\"][0][\"type\"]).to.eql(\"transfer_out\"));",
+                  "pm.test(\"data.0.amount = \\\"-3000.00\\\"\", () => pm.expect(j[\"data\"][0][\"amount\"]).to.eql(\"-3000.00\"));",
+                  "pm.test(\"data.1.type = \\\"transfer_in\\\"\", () => pm.expect(j[\"data\"][1][\"type\"]).to.eql(\"transfer_in\"));",
+                  "pm.test(\"data.1.amount = \\\"3000.00\\\"\", () => pm.expect(j[\"data\"][1][\"amount\"]).to.eql(\"3000.00\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Owner withdrawal",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/owner-entries",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "owner-entries"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"withdrawal\",\n  \"account_id\": 2,\n  \"amount\": \"1000.00\",\n  \"note\": \"Family expenses\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.type = \\\"owner_withdrawal\\\"\", () => pm.expect(j[\"data\"][\"type\"]).to.eql(\"owner_withdrawal\"));",
+                  "pm.test(\"data.amount = \\\"-1000.00\\\"\", () => pm.expect(j[\"data\"][\"amount\"]).to.eql(\"-1000.00\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cash balance before counting",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "1"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.balance = \\\"6800.00\\\"\", () => pm.expect(j[\"data\"][\"balance\"]).to.eql(\"6800.00\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reconcile the till to the counted amount",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/account-adjustments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "account-adjustments"
+              ]
+            },
+            "description": "The server records the difference: 6750 - 6800.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_id\": 1,\n  \"counted_balance\": \"6750.00\",\n  \"note\": \"Till count, evening\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.type = \\\"adjustment\\\"\", () => pm.expect(j[\"data\"][\"type\"]).to.eql(\"adjustment\"));",
+                  "pm.test(\"data.amount = \\\"-50.00\\\"\", () => pm.expect(j[\"data\"][\"amount\"]).to.eql(\"-50.00\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cash ledger, newest first",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/account-transactions?account_id=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "account-transactions"
+              ],
+              "query": [
+                {
+                  "key": "account_id",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.0.type = \\\"adjustment\\\"\", () => pm.expect(j[\"data\"][0][\"type\"]).to.eql(\"adjustment\"));",
+                  "pm.test(\"data.1.type = \\\"transfer_out\\\"\", () => pm.expect(j[\"data\"][1][\"type\"]).to.eql(\"transfer_out\"));",
+                  "pm.test(\"data.2.type = \\\"expense\\\"\", () => pm.expect(j[\"data\"][2][\"type\"]).to.eql(\"expense\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Business summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/summary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "summary"
+              ]
+            },
+            "description": "Net worth = money + inventory at cost + receivables - payables.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.accounts.total = \\\"14250.00\\\"\", () => pm.expect(j[\"data\"][\"accounts\"][\"total\"]).to.eql(\"14250.00\"));",
+                  "pm.test(\"data.inventory.at_cost = \\\"101850.00\\\"\", () => pm.expect(j[\"data\"][\"inventory\"][\"at_cost\"]).to.eql(\"101850.00\"));",
+                  "pm.test(\"data.receivables = \\\"525.00\\\"\", () => pm.expect(j[\"data\"][\"receivables\"]).to.eql(\"525.00\"));",
+                  "pm.test(\"data.payables = \\\"7800.00\\\"\", () => pm.expect(j[\"data\"][\"payables\"]).to.eql(\"7800.00\"));",
+                  "pm.test(\"data.net_worth = \\\"108825.00\\\"\", () => pm.expect(j[\"data\"][\"net_worth\"]).to.eql(\"108825.00\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Staff cannot see the summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/summary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "summary"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 403\", () => pm.response.to.have.status(403));",
+                  "const j = pm.response.json();"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
