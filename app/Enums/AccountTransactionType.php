@@ -16,4 +16,24 @@ enum AccountTransactionType: string
     case OwnerWithdrawal = 'owner_withdrawal';
     case Adjustment = 'adjustment';
     case Reversal = 'reversal';
+
+    /**
+     * The sign an amount of this type must have: 1 money in, -1 money out, null either.
+     */
+    public function sign(): ?int
+    {
+        return match ($this) {
+            self::SalePayment, self::TransferIn, self::OwnerDeposit => 1,
+            self::PurchasePayment, self::Expense, self::TransferOut, self::OwnerWithdrawal => -1,
+            self::Adjustment, self::Reversal => null,
+        };
+    }
+
+    /**
+     * Whether a reason (note) is required for this type.
+     */
+    public function requiresNote(): bool
+    {
+        return in_array($this, [self::Expense, self::Adjustment, self::Reversal], true);
+    }
 }
