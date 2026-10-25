@@ -26,6 +26,100 @@ FOLDERS = [
   step("Log in as staff", "POST", "/auth/login", body={"email": "staff@example.com", "password": "password"},
        checks={"data.user.roles": ["staff"]}, captures={STAFF: "data.token"}),
  ]),
+ ("Phase 1 — Auth, users and errors", "Login, the current user, logout, user management and the error format.", [
+  step("Who am I (owner)", "GET", "/auth/me", OWNER,
+       checks={"data.email": "owner@example.com", "data.roles": ["owner"], "data.permissions.0": "accounts.manage"}),
+  step("Who am I (staff)", "GET", "/auth/me", STAFF,
+       checks={"data.permissions": ["customers.manage", "payments.record", "sales.create"]}),
+  step("Wrong password", "POST", "/auth/login", status=422, body={"email": "owner@example.com", "password": "wrong-password"},
+       checks={"errors.email.0": "These credentials do not match our records."}),
+  step("Login needs email and password", "POST", "/auth/login", status=422, body={},
+       checks={"errors.email.0": "The email field is required.", "errors.password.0": "The password field is required."}),
+  step("Log in on a second device", "POST", "/auth/login", body={"email": "owner@example.com", "password": "password", "device_name": "Postman logout test"},
+       captures={"secondDeviceToken": "data.token"}, note="device_name is optional; it names the token."),
+  step("Log out that device", "POST", "/auth/logout", "secondDeviceToken", status=204, note="Only this token is revoked; the owner token still works."),
+  step("The logged-out token no longer works", "GET", "/auth/me", "secondDeviceToken", status=401, checks={"message": "Unauthenticated."}),
+  step("Not logged in", "GET", "/auth/me", status=401, checks={"message": "Unauthenticated."}),
+  step("Owner lists users", "GET", "/users", OWNER, checks={"data.0.name": "Demo Owner", "data.0.roles": ["owner"]}),
+  step("Owner creates a staff user", "POST", "/users", OWNER, status=201,
+       body={"name": "Cashier Two", "email": "cashier2@example.com", "password": "secret-password",
+             "password_confirmation": "secret-password", "role": "staff"},
+       checks={"data.email": "cashier2@example.com", "data.roles": ["staff"]}),
+  step("Email already taken", "POST", "/users", OWNER, status=422,
+       body={"name": "Copy", "email": "cashier2@example.com", "password": "secret-password",
+             "password_confirmation": "secret-password", "role": "staff"},
+       checks={"errors.email.0": "The email has already been taken."}),
+  step("The new user can log in", "POST", "/auth/login", body={"email": "cashier2@example.com", "password": "secret-password"},
+       checks={"data.user.roles": ["staff"]}),
+  step("Staff cannot manage users", "GET", "/users", STAFF, status=403, checks={"message": "This action is unauthorized."}),
+  step("Unknown record", "GET", "/products/9999", OWNER, status=404, checks={"message": "Resource not found."}),
+ ]),
+ ("Phase 2 — Master data", "Categories, products, suppliers, customers and accounts. Creates its own records so later folders are unaffected.", [
+  step("Anyone logged in can list categories", "GET", "/categories", STAFF, checks={"data.0.name": "Building materials"}),
+  step("Create a category", "POST", "/categories", OWNER, status=201, body={"name": "Plumbing", "description": "Pipes and fittings"},
+       checks={"data.name": "Plumbing"}, captures={"categoryId": "data.id"}),
+  step("Category names are unique", "POST", "/categories", OWNER, status=422, body={"name": "Plumbing"},
+       checks={"errors.name.0": "The name has already been taken."}),
+  step("Staff cannot create categories", "POST", "/categories", STAFF, status=403, body={"name": "Tools"}),
+  step("Update a category", "PATCH", "/categories/{{categoryId}}", OWNER, body={"description": "Pipes, fittings and taps"},
+       checks={"data.description": "Pipes, fittings and taps", "data.name": "Plumbing"}),
+  step("Create a product", "POST", "/products", OWNER, status=201,
+       body={"category_id": "{{categoryId}}", "sku": "PIPE-1", "name": "PVC pipe 1 inch", "unit": "piece",
+             "cost_price": 50, "selling_price": "65.5", "reorder_level": 5},
+       checks={"data.sku": "PIPE-1", "data.cost_price": "50.00", "data.selling_price": "65.50", "data.stock": 0, "data.category.name": "Plumbing"},
+       captures={"productId": "data.id"}, note="Money always comes back as a string with two decimals."),
+  step("SKUs are unique", "POST", "/products", OWNER, status=422,
+       body={"category_id": "{{categoryId}}", "sku": "PIPE-1", "name": "Copy", "unit": "piece", "cost_price": 1, "selling_price": 1},
+       checks={"errors.sku.0": "The sku has already been taken."}),
+  step("Prices have at most two decimals", "POST", "/products", OWNER, status=422,
+       body={"category_id": "{{categoryId}}", "sku": "PIPE-2", "name": "Pipe", "unit": "piece", "cost_price": "1.005", "selling_price": 2},
+       checks={"errors.cost_price.0": "The cost price field must have 0-2 decimal places."}),
+  step("Search products", "GET", "/products?search=PIPE", STAFF, checks={"data.0.sku": "PIPE-1"}),
+  step("A category with products cannot be deleted", "DELETE", "/categories/{{categoryId}}", OWNER, status=409,
+       checks={"message": "This category still has products and cannot be deleted."}),
+  step("Create a supplier", "POST", "/suppliers", OWNER, status=201,
+       body={"name": "Addis Pipes", "contact_person": "Abebe", "phone": "+251911223344", "email": "sales@addispipes.example"},
+       checks={"data.name": "Addis Pipes"}),
+  step("Staff cannot create suppliers", "POST", "/suppliers", STAFF, status=403, body={"name": "Other"}),
+  step("Staff registers a customer", "POST", "/customers", STAFF, status=201, body={"name": "Almaz", "phone": "+251922000111"},
+       checks={"data.name": "Almaz"}, captures={"customerId": "data.id"}, note="Staff can register customers for credit sales."),
+  step("Customer phones are unique", "POST", "/customers", STAFF, status=422, body={"name": "Other", "phone": "+251922000111"},
+       checks={"errors.phone.0": "The phone has already been taken."}),
+  step("Delete the customer (soft delete)", "DELETE", "/customers/{{customerId}}", STAFF, status=204),
+  step("A deleted customer is gone", "GET", "/customers/{{customerId}}", STAFF, status=404),
+  step("Create an account", "POST", "/accounts", OWNER, status=201, body={"name": "Telebirr", "type": "mobile_money"},
+       checks={"data.type": "mobile_money", "data.opening_balance": "0.00", "data.balance": "0.00"}, captures={"accountId": "data.id"}),
+  step("Opening balance cannot be edited", "PATCH", "/accounts/{{accountId}}", OWNER, status=422, body={"opening_balance": "100.00"},
+       checks={"errors.opening_balance.0": "The opening balance cannot be changed. Record an adjustment instead."}),
+  step("Deactivate the account", "PATCH", "/accounts/{{accountId}}", OWNER, body={"is_active": False}, checks={"data.is_active": False}),
+  step("Accounts cannot be deleted", "DELETE", "/accounts/{{accountId}}", OWNER, status=405),
+  step("Staff cannot create accounts", "POST", "/accounts", STAFF, status=403, body={"name": "Other", "type": "cash"}),
+ ]),
+ ("Phase 3 — Stock", "Stock is the sum of stock movements. Uses the product from phase 2 and brings it back to zero.", [
+  step("Add opening stock", "POST", "/stock-adjustments", OWNER, status=201,
+       body={"product_id": "{{productId}}", "quantity": 20, "note": "Opening stock"},
+       checks={"data.type": "adjustment", "data.quantity": 20, "data.product.sku": "PIPE-1"}),
+  step("Product stock is calculated", "GET", "/products/{{productId}}", STAFF, checks={"data.stock": 20}),
+  step("Stock cannot go negative", "POST", "/stock-adjustments", OWNER, status=422,
+       body={"product_id": "{{productId}}", "quantity": -25, "note": "Recount"},
+       checks={"message": "Not enough stock for PIPE-1: 20 on hand, 25 requested."}),
+  step("Adjustments need a reason", "POST", "/stock-adjustments", OWNER, status=422,
+       body={"product_id": "{{productId}}", "quantity": 1},
+       checks={"errors.note.0": "A reason is required for every stock adjustment."}),
+  step("Staff cannot adjust stock", "POST", "/stock-adjustments", STAFF, status=403,
+       body={"product_id": "{{productId}}", "quantity": 1, "note": "x"}),
+  step("Stock history of the product", "GET", "/stock-movements?product_id={{productId}}", STAFF,
+       checks={"data.0.quantity": 20, "data.0.note": "Opening stock"}),
+  step("A product with stock cannot be deleted", "DELETE", "/products/{{productId}}", OWNER, status=409,
+       checks={"message": "This product still has 20 in stock. Adjust stock to zero before deleting it."}),
+  step("Take the stock back out", "POST", "/stock-adjustments", OWNER, status=201,
+       body={"product_id": "{{productId}}", "quantity": -20, "note": "Returned to supplier"},
+       checks={"data.quantity": -20}),
+  step("Now the product can be deleted", "DELETE", "/products/{{productId}}", OWNER, status=204),
+  step("Its history stays", "GET", "/stock-movements?product_id={{productId}}", OWNER, checks={"data.0.quantity": -20, "data.1.quantity": 20}),
+  step("Its category still cannot be deleted", "DELETE", "/categories/{{categoryId}}", OWNER, status=409,
+       note="Deleted products still belong to the category, so their history stays intact."),
+ ]),
  ("Phase 4 — Purchases and sales", "Seed IDs: products 1 cement, 2 nails, 3 paint; supplier 1; customer 1; accounts 1 cash, 2 bank.", [
   step("List purchases", "GET", "/purchases", OWNER, checks={"data.0.number": "PUR-000001", "data.0.payment_status": "partial"}),
   step("Show purchase PUR-000001", "GET", "/purchases/1", OWNER,
@@ -105,9 +199,14 @@ def split_path(path):
 def js_access(path):
     return "j" + "".join(f"[{p}]" if p.isdigit() else f"[{json.dumps(p)}]" for p in split_path(path))
 
+def captured_variables():
+    return list(dict.fromkeys(var for _, _, steps in FOLDERS for s in steps for var in s["captures"] if var not in (OWNER, STAFF)))
+
 def postman():
     def item(s):
-        tests = [f'pm.test("status {s["status"]}", () => pm.response.to.have.status({s["status"]}));', "const j = pm.response.json();"]
+        tests = [f'pm.test("status {s["status"]}", () => pm.response.to.have.status({s["status"]}));']
+        if s["checks"] or s["captures"]:
+            tests.append("const j = pm.response.json();")
         for path, value in s["checks"].items():
             parts = split_path(path)
             if value is MISSING:
@@ -136,8 +235,8 @@ def postman():
         "info": {"name": "Inventory API — scenarios", "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
                  "description": "Run `php artisan migrate:fresh --seed`, start `php artisan serve`, then Run collection from the top. "
                                 "Steps depend on each other. For every endpoint and field, see the generated docs at /docs/api."},
-        "variable": [{"key": "baseUrl", "value": "http://localhost:8000/api/v1"}, {"key": OWNER, "value": ""}, {"key": STAFF, "value": ""},
-                     {"key": "purchaseId", "value": ""}, {"key": "creditSaleId", "value": ""}],
+        "variable": [{"key": "baseUrl", "value": "http://localhost:8000/api/v1"}]
+                    + [{"key": key, "value": ""} for key in [OWNER, STAFF, *captured_variables()]],
         "item": [{"name": n, "description": d, "item": [item(s) for s in steps]} for n, d, steps in FOLDERS],
     }
 
@@ -159,8 +258,9 @@ def run(base):
         for s in steps:
             body = json.dumps(sub(s["body"])).encode() if s["body"] is not None else None
             headers = {"Accept": "application/json", "Content-Type": "application/json"}
-            if s["token"]: headers["Authorization"] = "Bearer " + vars_[s["token"]]
-            req = urllib.request.Request(base + s["path"], data=body, method=s["method"], headers=headers)
+            if s["token"]: headers["Authorization"] = "Bearer " + str(vars_[s["token"]])
+            path = re.sub(r"\{\{(\w+)\}\}", lambda m: str(vars_[m.group(1)]), s["path"])
+            req = urllib.request.Request(base + path, data=body, method=s["method"], headers=headers)
             try:
                 with urllib.request.urlopen(req) as r: code, j = r.status, json.loads(r.read() or b"null")
             except urllib.error.HTTPError as e: code, j = e.code, json.loads(e.read() or b"null")
