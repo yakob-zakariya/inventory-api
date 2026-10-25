@@ -1,0 +1,47 @@
+<?php
+
+namespace App\Http\Resources;
+
+use App\Models\Sale;
+use App\Support\Money;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+
+/**
+ * @mixin Sale
+ */
+class SaleResource extends JsonResource
+{
+    /**
+     * Transform the resource into an array.
+     *
+     * @return array<string, mixed>
+     */
+    public function toArray(Request $request): array
+    {
+        return [
+            'id' => $this->id,
+            'number' => $this->number,
+            'customer_id' => $this->customer_id,
+            'customer' => $this->whenLoaded('customer', fn () => $this->customer ? [
+                'id' => $this->customer->id,
+                'name' => $this->customer->name,
+            ] : null),
+            'sale_date' => $this->sale_date->toDateString(),
+            'total_amount' => $this->total_amount,
+            'paid_amount' => Money::fromCents($this->paidCents()),
+            'balance_due' => Money::fromCents($this->balanceDueCents()),
+            'payment_status' => $this->paymentStatus(),
+            'status' => $this->status,
+            'note' => $this->note,
+            'voided_at' => $this->voided_at,
+            'void_reason' => $this->void_reason,
+            'items' => SaleItemResource::collection($this->whenLoaded('items')),
+            'payments' => $this->whenLoaded('payments', fn () => $this->payments->map(
+                fn ($payment) => new DocumentPaymentResource($payment, Sale::paymentSign()),
+            )),
+            'created_by' => $this->created_by,
+            'created_at' => $this->created_at,
+        ];
+    }
+}

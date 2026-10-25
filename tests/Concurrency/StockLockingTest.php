@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\StockMovementType;
-use App\Exceptions\BusinessRuleException;
 use App\Models\Product;
 use App\Models\StockMovement;
 use App\Services\StockLedger;
@@ -37,63 +36,23 @@ it('never oversells when two processes remove stock at the same time', function 
     $product = Product::factory()->create(['sku' => 'RACE-1']);
     DB::transaction(fn () => app(StockLedger::class)->record($product, StockMovementType::Adjustment, 5, 'Opening stock'));
 
-    $resultsDir = storage_path('framework/testing/concurrency-'.uniqid());
-    mkdir($resultsDir, recursive: true);
-    $startAt = microtime(true) + 0.5;
+    $removeFour = function () use ($product) {
+        DB::transaction(function () use ($product) {
+            $ledger = app(StockLedger::class);
+            $locked = $ledger->lockProducts([$product->id])->first();
 
-    // Children must open their own connections, not share the parent's socket.
-    DB::disconnect();
+            // Hold the lock long enough that, without it, both workers would read 5.
+            usleep(300_000);
 
-    $children = [];
+            $ledger->record($locked, StockMovementType::Adjustment, -4, 'Race');
+        });
 
-    foreach ([1, 2] as $worker) {
-        $pid = pcntl_fork();
+        return 'recorded';
+    };
 
-        if ($pid === 0) {
-            $outcome = 'error';
+    $outcomes = collect(inParallel([$removeFour, $removeFour]))->sort()->values()->all();
 
-            try {
-                while (microtime(true) < $startAt) {
-                    usleep(1_000);
-                }
-
-                DB::transaction(function () use ($product) {
-                    $ledger = app(StockLedger::class);
-                    $locked = $ledger->lockProducts([$product->id])->first();
-
-                    // Hold the lock long enough that, without it, both workers would read 5.
-                    usleep(300_000);
-
-                    $ledger->record($locked, StockMovementType::Adjustment, -4, 'Race');
-                });
-
-                $outcome = 'recorded';
-            } catch (BusinessRuleException) {
-                $outcome = 'refused';
-            } catch (Throwable $e) {
-                $outcome = 'error: '.$e->getMessage();
-            }
-
-            file_put_contents("{$resultsDir}/{$worker}", $outcome);
-
-            // Skip PHPUnit's shutdown handlers in the child.
-            posix_kill(posix_getpid(), SIGKILL);
-        }
-
-        $children[] = $pid;
-    }
-
-    foreach ($children as $pid) {
-        pcntl_waitpid($pid, $status);
-    }
-
-    $outcomes = collect([1, 2])->map(fn ($worker) => file_get_contents("{$resultsDir}/{$worker}"))->sort()->values()->all();
-    array_map('unlink', glob("{$resultsDir}/*"));
-    rmdir($resultsDir);
-
-    DB::reconnect();
-
-    expect($outcomes)->toBe(['recorded', 'refused'])
+    expect($outcomes)->toBe(['BusinessRuleException: Not enough stock for RACE-1: 1 on hand, 4 requested.', 'recorded'])
         ->and($product->currentStock())->toBe(1)
         ->and(StockMovement::where('product_id', $product->id)->pluck('quantity')->sort()->values()->all())->toBe([-4, 5]);
 });

@@ -118,7 +118,7 @@ If reports ever become slow, cached columns may be added, but only alongside the
 
 ## 8. Business rules
 
-1. Stock never goes negative. Sales, negative adjustments, and voids that remove stock check current stock while holding a lock on the product rows, locked in a consistent order (by id) to avoid deadlocks.
+1. Stock never goes negative. Sales, negative adjustments, and voids that remove stock check current stock while holding a lock on the product rows, locked in a consistent order (by id) to avoid deadlocks. Lock order in every transaction: product rows (by id) first, then the `document_sequences` row.
 2. A sale that is not fully paid when created requires a customer. Walk-in sales must be paid in full.
 3. A payment cannot exceed the balance due and cannot be recorded against a voided document.
 4. A document can be voided only if its net payments are zero (any payments must be voided first) and the reversal passes the stock rule.
@@ -126,7 +126,7 @@ If reports ever become slow, cached columns may be added, but only alongside the
 6. A wrong ledger entry (payment, expense, owner entry) is corrected by a reversal row that points to the original and has the opposite amount. Transfers are reversed as a pair.
 7. A transfer needs two different accounts and always creates its two rows together.
 8. Item product ids within one document must be distinct. Quantities are at least 1.
-9. Prices and costs are copied to the items at creation.
+9. Prices and costs are copied to the items at creation. A sale item's `unit_price` defaults to the product's selling price and may be overridden per item; its `unit_cost` is always the product's cost price at that moment. A purchase sets each product's `cost_price` to the item's `unit_cost` (last purchase cost).
 10. Document numbers are sequential per document type, generated under a lock.
 11. Dates on documents cannot be in the future.
 12. Soft-deleted products cannot be used on new documents.
@@ -162,6 +162,7 @@ Prefix `/api/v1`. All routes except login need a Sanctum token. Permissions are 
 - Stock: `GET /stock-movements` (filters: product, type), `POST /stock-adjustments`.
 - Purchases: `GET /purchases`, `GET /purchases/{id}`, `POST /purchases`, `POST /purchases/{id}/void`.
 - Sales: `GET /sales`, `GET /sales/{id}`, `POST /sales`, `POST /sales/{id}/void`.
+- Viewing: purchases need `purchases.create`. Sales are visible to any logged-in user, but sale items show `unit_cost` only to users with `reports.view`.
 - Money: `GET /account-transactions`, `POST /payments` (against a document), `POST /expenses`, `POST /transfers`, `POST /owner-entries`, `POST /account-adjustments`, `POST /account-transactions/{id}/reverse`.
 - Reports: stock levels and low stock, supplier payables, customer receivables, account balances, cash flow, profit.
 
@@ -198,8 +199,8 @@ The repository starts from a fresh Laravel skeleton. Each phase is built on its 
 1. **Foundation:** database choice, users, spatie/laravel-permission with the permissions and roles seeder, Sanctum login, base response and error conventions, a command to create the owner, first feature tests.
 2. **Master data:** categories, suppliers, customers, products, accounts.
 3. **Stock ledger and adjustments.**
-4. **Purchases and sales:** numbering, nested items, stock rules.
-5. **Money ledger:** payments against documents, expenses, transfers, owner entries, reconciliation.
+4. **Purchases and sales:** numbering, nested items, stock rules, and the payments sent with a new document (this phase creates `account_transactions` for `sale_payment` and `purchase_payment`).
+5. **Money ledger:** later payments against documents, expenses, transfers, owner entries, reconciliation.
 6. **Voiding:** documents and ledger entries.
 7. **Reports.**
 8. **Professional finish:** API docs, README, verify command, backups, cloud deployment, CI.
