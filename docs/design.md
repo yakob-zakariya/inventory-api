@@ -120,7 +120,7 @@ If reports ever become slow, cached columns may be added, but only alongside the
 
 ## 8. Business rules
 
-1. Stock never goes negative. Sales, negative adjustments, and voids that remove stock check current stock while holding a lock on the product rows, locked in a consistent order (by id) to avoid deadlocks. Lock order in every transaction: product rows (by id) first, then the `document_sequences` row.
+1. Stock never goes negative. Sales, negative adjustments, and voids that remove stock check current stock while holding a lock on the product rows, locked in a consistent order (by id) to avoid deadlocks. Lock order in every transaction: product rows (by id), then document rows, then the `document_sequences` row, then account rows (by id). Every money ledger write locks its account row.
 2. A sale that is not fully paid when created requires a customer. Walk-in sales must be paid in full.
 3. A payment cannot exceed the balance due (422) and cannot be recorded against a voided document (409). Recording a payment locks the document row first. A payment against a purchase also needs `purchases.create`, so staff can only take payments for sales.
 4. A document can be voided only if its net payments are zero (any payments must be voided first) and the reversal passes the stock rule.

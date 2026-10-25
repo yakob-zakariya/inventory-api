@@ -3,7 +3,7 @@
 namespace App\Http\Requests\Api\V1;
 
 use App\Enums\Permission;
-use App\Models\Account;
+use App\Http\Requests\Api\V1\Concerns\MoneyRules;
 use App\Models\Purchase;
 use App\Models\Sale;
 use App\Support\Money;
@@ -13,6 +13,8 @@ use Illuminate\Validation\Rule;
 
 class StorePaymentRequest extends FormRequest
 {
+    use MoneyRules;
+
     /**
      * Paying a purchase also needs purchases.create: staff take payments for sales only.
      */
@@ -38,9 +40,9 @@ class StorePaymentRequest extends FormRequest
         return [
             'document_type' => ['required', Rule::in(['sale', 'purchase'])],
             'document_id' => ['required', 'integer', ...($documentClass ? [Rule::exists($documentClass, 'id')] : [])],
-            'account_id' => ['required', 'integer', Rule::exists(Account::class, 'id')->where('is_active', true)],
+            'account_id' => $this->activeAccountRules(),
             'amount' => ['required', ...Money::rules(), 'gt:0'],
-            'transaction_date' => ['sometimes', 'date_format:Y-m-d', 'before_or_equal:today'],
+            'transaction_date' => $this->transactionDateRules(),
             'receipt_reference' => ['nullable', 'string', 'max:100'],
             'note' => ['nullable', 'string', 'max:1000'],
         ];
@@ -51,8 +53,6 @@ class StorePaymentRequest extends FormRequest
      */
     public function messages(): array
     {
-        return [
-            'account_id.exists' => 'The selected account does not exist or is inactive.',
-        ];
+        return $this->accountMessages();
     }
 }
