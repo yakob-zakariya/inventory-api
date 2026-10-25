@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\V1\OwnerEntryController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\ProductController;
 use App\Http\Controllers\Api\V1\PurchaseController;
+use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\SaleController;
 use App\Http\Controllers\Api\V1\StockAdjustmentController;
 use App\Http\Controllers\Api\V1\StockMovementController;
@@ -92,6 +93,7 @@ Route::prefix('v1')->name('v1.')->group(function () {
         // Money ledger and reports.
         Route::middleware('permission:'.Permission::ReportsView->value)->group(function () {
             Route::get('account-transactions', [AccountTransactionController::class, 'index'])->name('account-transactions.index');
+            Route::get('reports/summary', [ReportController::class, 'summary'])->name('reports.summary');
         });
     });
 });

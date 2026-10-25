@@ -68,6 +68,28 @@ class Product extends Model
     }
 
     /**
+     * Value of all stock on hand, in cents, at cost and at selling price, calculated in SQL.
+     *
+     * @return array{cost: int, selling: int}
+     */
+    public static function inventoryValueCents(): array
+    {
+        $stock = StockMovement::query()
+            ->select('product_id')
+            ->selectRaw('sum(quantity) as on_hand')
+            ->groupBy('product_id');
+
+        $totals = static::query()
+            ->joinSub($stock, 'stock', 'stock.product_id', '=', 'products.id')
+            ->selectRaw('coalesce(sum(stock.on_hand * round(products.cost_price * 100)), 0) as cost')
+            ->selectRaw('coalesce(sum(stock.on_hand * round(products.selling_price * 100)), 0) as selling')
+            ->toBase()
+            ->first();
+
+        return ['cost' => (int) $totals->cost, 'selling' => (int) $totals->selling];
+    }
+
+    /**
      * Current stock, always calculated from the ledger.
      */
     public function currentStock(): int
