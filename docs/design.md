@@ -62,11 +62,13 @@ Timestamps are on every table.
 - Spatie tables (`roles`, `permissions`, `model_has_roles`, `model_has_permissions`, `role_has_permissions`) are created by the package's migration.
 
 ### Master data
+Every master data table also has `created_by` (nullable, the user who created the row).
+
 - `categories`: name (unique), description.
 - `suppliers`: name, contact_person, phone, email, address, deleted_at.
 - `customers`: name, phone (unique when present), address, deleted_at.
 - `products`: category_id, sku (unique), name, description, unit (text label such as "bag"), cost_price, selling_price, reorder_level (integer), deleted_at.
-- `accounts`: name (unique), type (cash, bank, mobile_money), opening_balance, is_active.
+- `accounts`: name (unique), type (cash, bank, mobile_money), opening_balance, is_active. Accounts are never deleted, only deactivated. `opening_balance` is fixed once the account is created; a wrong opening balance is corrected with an `adjustment` transaction.
 
 ### Documents
 - `purchases`: number (unique, for example PUR-000123), supplier_id, invoice_number, purchase_date, total_amount, note, status (active, voided), voided_at, voided_by, void_reason, created_by.
@@ -128,7 +130,7 @@ If reports ever become slow, cached columns may be added, but only alongside the
 10. Document numbers are sequential per document type, generated under a lock.
 11. Dates on documents cannot be in the future.
 12. Soft-deleted products cannot be used on new documents.
-13. Categories and products cannot be deleted while other records depend on them (409).
+13. A category cannot be deleted while any product (including soft-deleted ones) belongs to it (409). Deleting a product is a soft delete, refused with 409 while the product still has stock on hand.
 
 ## 9. Core flows
 
@@ -165,10 +167,10 @@ Prefix `/api/v1`. All routes except login need a Sanctum token. Permissions are 
 
 ## 11. Permissions (v1 proposal)
 
-Named permissions: `products.manage`, `stock.adjust`, `purchases.create`, `purchases.void`, `sales.create`, `sales.void`, `payments.record`, `payments.void`, `expenses.record`, `accounts.manage`, `reports.view`, `users.manage`.
+Named permissions: `products.manage`, `stock.adjust`, `purchases.create`, `purchases.void`, `sales.create`, `sales.void`, `payments.record`, `payments.void`, `expenses.record`, `accounts.manage`, `suppliers.manage`, `customers.manage`, `reports.view`, `users.manage`.
 
 - **owner:** all permissions.
-- **staff (for shops with more than one user):** view master data, `sales.create`, `payments.record` for sales. No voiding, purchases, expenses, accounts, or reports.
+- **staff (for shops with more than one user):** view master data, `customers.manage` (to register credit customers), `sales.create`, `payments.record` for sales. No voiding, purchases, expenses, accounts, or reports.
 
 Implementation with spatie/laravel-permission:
 - A seeder creates the permissions and the two roles, so every environment gets the same set.

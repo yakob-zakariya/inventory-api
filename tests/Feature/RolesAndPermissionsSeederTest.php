@@ -18,9 +18,9 @@ it('gives the owner every permission', function () {
         ->toBe(collect(Permission::values())->sort()->values()->all());
 });
 
-it('gives staff only sale creation and payment recording', function () {
+it('gives staff only customer management, sale creation and payment recording', function () {
     expect(RoleModel::findByName(Role::Staff->value)->permissions->pluck('name')->sort()->values()->all())
-        ->toBe(['payments.record', 'sales.create']);
+        ->toBe(['customers.manage', 'payments.record', 'sales.create']);
 });
 
 it('can run again without creating duplicates', function () {

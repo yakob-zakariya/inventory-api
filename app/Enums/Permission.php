@@ -14,6 +14,8 @@ enum Permission: string
     case PaymentsVoid = 'payments.void';
     case ExpensesRecord = 'expenses.record';
     case AccountsManage = 'accounts.manage';
+    case SuppliersManage = 'suppliers.manage';
+    case CustomersManage = 'customers.manage';
     case ReportsView = 'reports.view';
     case UsersManage = 'users.manage';
 

@@ -21,6 +21,7 @@ enum Role: string
         return match ($this) {
             self::Owner => Permission::cases(),
             self::Staff => [
+                Permission::CustomersManage,
                 Permission::SalesCreate,
                 Permission::PaymentsRecord,
             ],
