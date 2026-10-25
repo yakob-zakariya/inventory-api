@@ -2,12 +2,14 @@
 
 namespace App\Models\Concerns;
 
+use App\Enums\DocumentStatus;
 use App\Enums\PaymentStatus;
 use App\Models\AccountTransaction;
 use App\Support\Money;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Paid amount, balance due and payment status of a document, calculated from the
@@ -35,6 +37,23 @@ trait HasPayments
     protected function withPaymentTotals(Builder $query): void
     {
         $query->withSum('payments as payments_sum', 'amount');
+    }
+
+    /**
+     * Total still owed on all active documents of this type, in cents, calculated in SQL.
+     */
+    public static function outstandingCents(): int
+    {
+        $active = static::query()->where('status', DocumentStatus::Active->value);
+
+        $totalCents = (int) (clone $active)->sum(DB::raw('round(total_amount * 100)'));
+
+        $paymentsCents = (int) AccountTransaction::query()
+            ->where('reference_type', (new static)->getMorphClass())
+            ->whereIn('reference_id', (clone $active)->select('id'))
+            ->sum(DB::raw('round(amount * 100)'));
+
+        return $totalCents - $paymentsCents * static::paymentSign();
     }
 
     public function paidCents(): int

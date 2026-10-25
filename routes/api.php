@@ -1,16 +1,23 @@
 <?php
 
 use App\Enums\Permission;
+use App\Http\Controllers\Api\V1\AccountAdjustmentController;
 use App\Http\Controllers\Api\V1\AccountController;
+use App\Http\Controllers\Api\V1\AccountTransactionController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\CustomerController;
+use App\Http\Controllers\Api\V1\ExpenseController;
+use App\Http\Controllers\Api\V1\OwnerEntryController;
+use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\ProductController;
 use App\Http\Controllers\Api\V1\PurchaseController;
+use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\SaleController;
 use App\Http\Controllers\Api\V1\StockAdjustmentController;
 use App\Http\Controllers\Api\V1\StockMovementController;
 use App\Http\Controllers\Api\V1\SupplierController;
+use App\Http\Controllers\Api\V1\TransferController;
 use App\Http\Controllers\Api\V1\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -67,5 +74,26 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::post('sales', [SaleController::class, 'store'])
             ->middleware('permission:'.Permission::SalesCreate->value)
             ->name('sales.store');
+
+        // Later payments against a purchase or sale (purchases also need purchases.create).
+        Route::post('payments', PaymentController::class)
+            ->middleware('permission:'.Permission::PaymentsRecord->value)
+            ->name('payments.store');
+
+        Route::post('expenses', ExpenseController::class)
+            ->middleware('permission:'.Permission::ExpensesRecord->value)
+            ->name('expenses.store');
+
+        Route::middleware('permission:'.Permission::AccountsManage->value)->group(function () {
+            Route::post('transfers', TransferController::class)->name('transfers.store');
+            Route::post('owner-entries', OwnerEntryController::class)->name('owner-entries.store');
+            Route::post('account-adjustments', AccountAdjustmentController::class)->name('account-adjustments.store');
+        });
+
+        // Money ledger and reports.
+        Route::middleware('permission:'.Permission::ReportsView->value)->group(function () {
+            Route::get('account-transactions', [AccountTransactionController::class, 'index'])->name('account-transactions.index');
+            Route::get('reports/summary', [ReportController::class, 'summary'])->name('reports.summary');
+        });
     });
 });

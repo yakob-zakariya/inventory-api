@@ -1,0 +1,4017 @@
+{
+  "info": {
+    "name": "Inventory API — scenarios",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Run `php artisan migrate:fresh --seed`, start `php artisan serve`, then Run collection from the top. Steps depend on each other. For every endpoint and field, see the generated docs at /docs/api."
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000/api/v1"
+    },
+    {
+      "key": "ownerToken",
+      "value": ""
+    },
+    {
+      "key": "staffToken",
+      "value": ""
+    },
+    {
+      "key": "secondDeviceToken",
+      "value": ""
+    },
+    {
+      "key": "categoryId",
+      "value": ""
+    },
+    {
+      "key": "productId",
+      "value": ""
+    },
+    {
+      "key": "customerId",
+      "value": ""
+    },
+    {
+      "key": "accountId",
+      "value": ""
+    },
+    {
+      "key": "purchaseId",
+      "value": ""
+    },
+    {
+      "key": "creditSaleId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Setup — log in",
+      "description": "Run `php artisan migrate:fresh --seed` first. These save the tokens for every later request.",
+      "item": [
+        {
+          "name": "Log in as owner",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"owner@example.com\",\n  \"password\": \"password\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.user.roles = [\\\"owner\\\"]\", () => pm.expect(j[\"data\"][\"user\"][\"roles\"]).to.eql([\"owner\"]));",
+                  "pm.collectionVariables.set(\"ownerToken\", j[\"data\"][\"token\"]);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Log in as staff",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"staff@example.com\",\n  \"password\": \"password\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.user.roles = [\\\"staff\\\"]\", () => pm.expect(j[\"data\"][\"user\"][\"roles\"]).to.eql([\"staff\"]));",
+                  "pm.collectionVariables.set(\"staffToken\", j[\"data\"][\"token\"]);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Phase 1 — Auth, users and errors",
+      "description": "Login, the current user, logout, user management and the error format.",
+      "item": [
+        {
+          "name": "Who am I (owner)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.email = \\\"owner@example.com\\\"\", () => pm.expect(j[\"data\"][\"email\"]).to.eql(\"owner@example.com\"));",
+                  "pm.test(\"data.roles = [\\\"owner\\\"]\", () => pm.expect(j[\"data\"][\"roles\"]).to.eql([\"owner\"]));",
+                  "pm.test(\"data.permissions.0 = \\\"accounts.manage\\\"\", () => pm.expect(j[\"data\"][\"permissions\"][0]).to.eql(\"accounts.manage\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Who am I (staff)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.permissions = [\\\"customers.manage\\\", \\\"payments.record\\\", \\\"sales.create\\\"]\", () => pm.expect(j[\"data\"][\"permissions\"]).to.eql([\"customers.manage\", \"payments.record\", \"sales.create\"]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Wrong password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"owner@example.com\",\n  \"password\": \"wrong-password\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 422\", () => pm.response.to.have.status(422));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"errors.email.0 = \\\"These credentials do not match our records.\\\"\", () => pm.expect(j[\"errors\"][\"email\"][0]).to.eql(\"These credentials do not match our records.\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login needs email and password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 422\", () => pm.response.to.have.status(422));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"errors.email.0 = \\\"The email field is required.\\\"\", () => pm.expect(j[\"errors\"][\"email\"][0]).to.eql(\"The email field is required.\"));",
+                  "pm.test(\"errors.password.0 = \\\"The password field is required.\\\"\", () => pm.expect(j[\"errors\"][\"password\"][0]).to.eql(\"The password field is required.\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Log in on a second device",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "device_name is optional; it names the token.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"owner@example.com\",\n  \"password\": \"password\",\n  \"device_name\": \"Postman logout test\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.collectionVariables.set(\"secondDeviceToken\", j[\"data\"][\"token\"]);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Log out that device",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Only this token is revoked; the owner token still works.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{secondDeviceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "The logged-out token no longer works",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{secondDeviceToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 401\", () => pm.response.to.have.status(401));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"message = \\\"Unauthenticated.\\\"\", () => pm.expect(j[\"message\"]).to.eql(\"Unauthenticated.\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Not logged in",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 401\", () => pm.response.to.have.status(401));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"message = \\\"Unauthenticated.\\\"\", () => pm.expect(j[\"message\"]).to.eql(\"Unauthenticated.\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Owner lists users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.0.name = \\\"Demo Owner\\\"\", () => pm.expect(j[\"data\"][0][\"name\"]).to.eql(\"Demo Owner\"));",
+                  "pm.test(\"data.0.roles = [\\\"owner\\\"]\", () => pm.expect(j[\"data\"][0][\"roles\"]).to.eql([\"owner\"]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Owner creates a staff user",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Cashier Two\",\n  \"email\": \"cashier2@example.com\",\n  \"password\": \"secret-password\",\n  \"password_confirmation\": \"secret-password\",\n  \"role\": \"staff\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.email = \\\"cashier2@example.com\\\"\", () => pm.expect(j[\"data\"][\"email\"]).to.eql(\"cashier2@example.com\"));",
+                  "pm.test(\"data.roles = [\\\"staff\\\"]\", () => pm.expect(j[\"data\"][\"roles\"]).to.eql([\"staff\"]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Email already taken",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Copy\",\n  \"email\": \"cashier2@example.com\",\n  \"password\": \"secret-password\",\n  \"password_confirmation\": \"secret-password\",\n  \"role\": \"staff\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 422\", () => pm.response.to.have.status(422));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"errors.email.0 = \\\"The email has already been taken.\\\"\", () => pm.expect(j[\"errors\"][\"email\"][0]).to.eql(\"The email has already been taken.\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "The new user can log in",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"cashier2@example.com\",\n  \"password\": \"secret-password\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.user.roles = [\\\"staff\\\"]\", () => pm.expect(j[\"data\"][\"user\"][\"roles\"]).to.eql([\"staff\"]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Staff cannot manage users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 403\", () => pm.response.to.have.status(403));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"message = \\\"This action is unauthorized.\\\"\", () => pm.expect(j[\"message\"]).to.eql(\"This action is unauthorized.\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unknown record",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products/9999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products",
+                "9999"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 404\", () => pm.response.to.have.status(404));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"message = \\\"Resource not found.\\\"\", () => pm.expect(j[\"message\"]).to.eql(\"Resource not found.\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Phase 2 — Master data",
+      "description": "Categories, products, suppliers, customers and accounts. Creates its own records so later folders are unaffected.",
+      "item": [
+        {
+          "name": "Anyone logged in can list categories",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/categories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "categories"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.0.name = \\\"Building materials\\\"\", () => pm.expect(j[\"data\"][0][\"name\"]).to.eql(\"Building materials\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create a category",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/categories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "categories"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Plumbing\",\n  \"description\": \"Pipes and fittings\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.name = \\\"Plumbing\\\"\", () => pm.expect(j[\"data\"][\"name\"]).to.eql(\"Plumbing\"));",
+                  "pm.collectionVariables.set(\"categoryId\", j[\"data\"][\"id\"]);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Category names are unique",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/categories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "categories"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Plumbing\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 422\", () => pm.response.to.have.status(422));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"errors.name.0 = \\\"The name has already been taken.\\\"\", () => pm.expect(j[\"errors\"][\"name\"][0]).to.eql(\"The name has already been taken.\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Staff cannot create categories",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/categories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "categories"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tools\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update a category",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/categories/{{categoryId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "categories",
+                "{{categoryId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Pipes, fittings and taps\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.description = \\\"Pipes, fittings and taps\\\"\", () => pm.expect(j[\"data\"][\"description\"]).to.eql(\"Pipes, fittings and taps\"));",
+                  "pm.test(\"data.name = \\\"Plumbing\\\"\", () => pm.expect(j[\"data\"][\"name\"]).to.eql(\"Plumbing\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create a product",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products"
+              ]
+            },
+            "description": "Money always comes back as a string with two decimals.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category_id\": {{categoryId}},\n  \"sku\": \"PIPE-1\",\n  \"name\": \"PVC pipe 1 inch\",\n  \"unit\": \"piece\",\n  \"cost_price\": 50,\n  \"selling_price\": \"65.5\",\n  \"reorder_level\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.sku = \\\"PIPE-1\\\"\", () => pm.expect(j[\"data\"][\"sku\"]).to.eql(\"PIPE-1\"));",
+                  "pm.test(\"data.cost_price = \\\"50.00\\\"\", () => pm.expect(j[\"data\"][\"cost_price\"]).to.eql(\"50.00\"));",
+                  "pm.test(\"data.selling_price = \\\"65.50\\\"\", () => pm.expect(j[\"data\"][\"selling_price\"]).to.eql(\"65.50\"));",
+                  "pm.test(\"data.stock = 0\", () => pm.expect(j[\"data\"][\"stock\"]).to.eql(0));",
+                  "pm.test(\"data.category.name = \\\"Plumbing\\\"\", () => pm.expect(j[\"data\"][\"category\"][\"name\"]).to.eql(\"Plumbing\"));",
+                  "pm.collectionVariables.set(\"productId\", j[\"data\"][\"id\"]);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "SKUs are unique",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category_id\": {{categoryId}},\n  \"sku\": \"PIPE-1\",\n  \"name\": \"Copy\",\n  \"unit\": \"piece\",\n  \"cost_price\": 1,\n  \"selling_price\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 422\", () => pm.response.to.have.status(422));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"errors.sku.0 = \\\"The sku has already been taken.\\\"\", () => pm.expect(j[\"errors\"][\"sku\"][0]).to.eql(\"The sku has already been taken.\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Prices have at most two decimals",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category_id\": {{categoryId}},\n  \"sku\": \"PIPE-2\",\n  \"name\": \"Pipe\",\n  \"unit\": \"piece\",\n  \"cost_price\": \"1.005\",\n  \"selling_price\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 422\", () => pm.response.to.have.status(422));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"errors.cost_price.0 = \\\"The cost price field must have 0-2 decimal places.\\\"\", () => pm.expect(j[\"errors\"][\"cost_price\"][0]).to.eql(\"The cost price field must have 0-2 decimal places.\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search products",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products?search=PIPE",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "PIPE"
+                }
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.0.sku = \\\"PIPE-1\\\"\", () => pm.expect(j[\"data\"][0][\"sku\"]).to.eql(\"PIPE-1\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A category with products cannot be deleted",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/categories/{{categoryId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "categories",
+                "{{categoryId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 409\", () => pm.response.to.have.status(409));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"message = \\\"This category still has products and cannot be deleted.\\\"\", () => pm.expect(j[\"message\"]).to.eql(\"This category still has products and cannot be deleted.\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create a supplier",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/suppliers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "suppliers"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Addis Pipes\",\n  \"contact_person\": \"Abebe\",\n  \"phone\": \"+251911223344\",\n  \"email\": \"sales@addispipes.example\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.name = \\\"Addis Pipes\\\"\", () => pm.expect(j[\"data\"][\"name\"]).to.eql(\"Addis Pipes\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Staff cannot create suppliers",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/suppliers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "suppliers"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Other\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Staff registers a customer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/customers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "customers"
+              ]
+            },
+            "description": "Staff can register customers for credit sales.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Almaz\",\n  \"phone\": \"+251922000111\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.name = \\\"Almaz\\\"\", () => pm.expect(j[\"data\"][\"name\"]).to.eql(\"Almaz\"));",
+                  "pm.collectionVariables.set(\"customerId\", j[\"data\"][\"id\"]);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Customer phones are unique",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/customers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "customers"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Other\",\n  \"phone\": \"+251922000111\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 422\", () => pm.response.to.have.status(422));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"errors.phone.0 = \\\"The phone has already been taken.\\\"\", () => pm.expect(j[\"errors\"][\"phone\"][0]).to.eql(\"The phone has already been taken.\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete the customer (soft delete)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/customers/{{customerId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "customers",
+                "{{customerId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A deleted customer is gone",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/customers/{{customerId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "customers",
+                "{{customerId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create an account",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Telebirr\",\n  \"type\": \"mobile_money\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.type = \\\"mobile_money\\\"\", () => pm.expect(j[\"data\"][\"type\"]).to.eql(\"mobile_money\"));",
+                  "pm.test(\"data.opening_balance = \\\"0.00\\\"\", () => pm.expect(j[\"data\"][\"opening_balance\"]).to.eql(\"0.00\"));",
+                  "pm.test(\"data.balance = \\\"0.00\\\"\", () => pm.expect(j[\"data\"][\"balance\"]).to.eql(\"0.00\"));",
+                  "pm.collectionVariables.set(\"accountId\", j[\"data\"][\"id\"]);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Opening balance cannot be edited",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/{{accountId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "{{accountId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"opening_balance\": \"100.00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 422\", () => pm.response.to.have.status(422));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"errors.opening_balance.0 = \\\"The opening balance cannot be changed. Record an adjustment instead.\\\"\", () => pm.expect(j[\"errors\"][\"opening_balance\"][0]).to.eql(\"The opening balance cannot be changed. Record an adjustment instead.\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Deactivate the account",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/{{accountId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "{{accountId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_active\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.is_active = false\", () => pm.expect(j[\"data\"][\"is_active\"]).to.eql(false));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Accounts cannot be deleted",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/{{accountId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "{{accountId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 405\", () => pm.response.to.have.status(405));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Staff cannot create accounts",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Other\",\n  \"type\": \"cash\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Phase 3 — Stock",
+      "description": "Stock is the sum of stock movements. Uses the product from phase 2 and brings it back to zero.",
+      "item": [
+        {
+          "name": "Add opening stock",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/stock-adjustments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "stock-adjustments"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": {{productId}},\n  \"quantity\": 20,\n  \"note\": \"Opening stock\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.type = \\\"adjustment\\\"\", () => pm.expect(j[\"data\"][\"type\"]).to.eql(\"adjustment\"));",
+                  "pm.test(\"data.quantity = 20\", () => pm.expect(j[\"data\"][\"quantity\"]).to.eql(20));",
+                  "pm.test(\"data.product.sku = \\\"PIPE-1\\\"\", () => pm.expect(j[\"data\"][\"product\"][\"sku\"]).to.eql(\"PIPE-1\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Product stock is calculated",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products/{{productId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products",
+                "{{productId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.stock = 20\", () => pm.expect(j[\"data\"][\"stock\"]).to.eql(20));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Stock cannot go negative",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/stock-adjustments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "stock-adjustments"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": {{productId}},\n  \"quantity\": -25,\n  \"note\": \"Recount\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 422\", () => pm.response.to.have.status(422));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"message = \\\"Not enough stock for PIPE-1: 20 on hand, 25 requested.\\\"\", () => pm.expect(j[\"message\"]).to.eql(\"Not enough stock for PIPE-1: 20 on hand, 25 requested.\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Adjustments need a reason",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/stock-adjustments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "stock-adjustments"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": {{productId}},\n  \"quantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 422\", () => pm.response.to.have.status(422));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"errors.note.0 = \\\"A reason is required for every stock adjustment.\\\"\", () => pm.expect(j[\"errors\"][\"note\"][0]).to.eql(\"A reason is required for every stock adjustment.\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Staff cannot adjust stock",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/stock-adjustments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "stock-adjustments"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": {{productId}},\n  \"quantity\": 1,\n  \"note\": \"x\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Stock history of the product",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/stock-movements?product_id={{productId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "stock-movements"
+              ],
+              "query": [
+                {
+                  "key": "product_id",
+                  "value": "{{productId}}"
+                }
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.0.quantity = 20\", () => pm.expect(j[\"data\"][0][\"quantity\"]).to.eql(20));",
+                  "pm.test(\"data.0.note = \\\"Opening stock\\\"\", () => pm.expect(j[\"data\"][0][\"note\"]).to.eql(\"Opening stock\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A product with stock cannot be deleted",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products/{{productId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products",
+                "{{productId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 409\", () => pm.response.to.have.status(409));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"message = \\\"This product still has 20 in stock. Adjust stock to zero before deleting it.\\\"\", () => pm.expect(j[\"message\"]).to.eql(\"This product still has 20 in stock. Adjust stock to zero before deleting it.\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Take the stock back out",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/stock-adjustments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "stock-adjustments"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": {{productId}},\n  \"quantity\": -20,\n  \"note\": \"Returned to supplier\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.quantity = -20\", () => pm.expect(j[\"data\"][\"quantity\"]).to.eql(-20));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Now the product can be deleted",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products/{{productId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products",
+                "{{productId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Its history stays",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/stock-movements?product_id={{productId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "stock-movements"
+              ],
+              "query": [
+                {
+                  "key": "product_id",
+                  "value": "{{productId}}"
+                }
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.0.quantity = -20\", () => pm.expect(j[\"data\"][0][\"quantity\"]).to.eql(-20));",
+                  "pm.test(\"data.1.quantity = 20\", () => pm.expect(j[\"data\"][1][\"quantity\"]).to.eql(20));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Its category still cannot be deleted",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/categories/{{categoryId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "categories",
+                "{{categoryId}}"
+              ]
+            },
+            "description": "Deleted products still belong to the category, so their history stays intact.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 409\", () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Phase 4 — Purchases and sales",
+      "description": "Seed IDs: products 1 cement, 2 nails, 3 paint; supplier 1; customer 1; accounts 1 cash, 2 bank.",
+      "item": [
+        {
+          "name": "List purchases",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/purchases",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "purchases"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.0.number = \\\"PUR-000001\\\"\", () => pm.expect(j[\"data\"][0][\"number\"]).to.eql(\"PUR-000001\"));",
+                  "pm.test(\"data.0.payment_status = \\\"partial\\\"\", () => pm.expect(j[\"data\"][0][\"payment_status\"]).to.eql(\"partial\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Show purchase PUR-000001",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/purchases/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "purchases",
+                "1"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.total_amount = \\\"12800.00\\\"\", () => pm.expect(j[\"data\"][\"total_amount\"]).to.eql(\"12800.00\"));",
+                  "pm.test(\"data.paid_amount = \\\"5000.00\\\"\", () => pm.expect(j[\"data\"][\"paid_amount\"]).to.eql(\"5000.00\"));",
+                  "pm.test(\"data.balance_due = \\\"7800.00\\\"\", () => pm.expect(j[\"data\"][\"balance_due\"]).to.eql(\"7800.00\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create purchase on part credit",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/purchases",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "purchases"
+              ]
+            },
+            "description": "Total is computed by the server. The product's cost price becomes 950.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"supplier_id\": 1,\n  \"invoice_number\": \"INV-2002\",\n  \"items\": [\n    {\n      \"product_id\": 3,\n      \"quantity\": 10,\n      \"unit_cost\": \"950.00\"\n    }\n  ],\n  \"payments\": [\n    {\n      \"account_id\": 2,\n      \"amount\": \"4000.00\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.number = \\\"PUR-000002\\\"\", () => pm.expect(j[\"data\"][\"number\"]).to.eql(\"PUR-000002\"));",
+                  "pm.test(\"data.total_amount = \\\"9500.00\\\"\", () => pm.expect(j[\"data\"][\"total_amount\"]).to.eql(\"9500.00\"));",
+                  "pm.test(\"data.paid_amount = \\\"4000.00\\\"\", () => pm.expect(j[\"data\"][\"paid_amount\"]).to.eql(\"4000.00\"));",
+                  "pm.test(\"data.payment_status = \\\"partial\\\"\", () => pm.expect(j[\"data\"][\"payment_status\"]).to.eql(\"partial\"));",
+                  "pm.collectionVariables.set(\"purchaseId\", j[\"data\"][\"id\"]);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Product cost follows the last purchase",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products/3",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products",
+                "3"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.cost_price = \\\"950.00\\\"\", () => pm.expect(j[\"data\"][\"cost_price\"]).to.eql(\"950.00\"));",
+                  "pm.test(\"data.stock = 59\", () => pm.expect(j[\"data\"][\"stock\"]).to.eql(59));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Staff cannot see purchases",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/purchases",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "purchases"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 403\", () => pm.response.to.have.status(403));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"message = \\\"This action is unauthorized.\\\"\", () => pm.expect(j[\"message\"]).to.eql(\"This action is unauthorized.\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Staff sells to a walk-in, paid in full",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sales",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sales"
+              ]
+            },
+            "description": "No unit_price sent: the selling price is used. Staff never see unit_cost.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"product_id\": 1,\n      \"quantity\": 3\n    }\n  ],\n  \"payments\": [\n    {\n      \"account_id\": 1,\n      \"amount\": \"2160.00\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.number = \\\"SAL-000003\\\"\", () => pm.expect(j[\"data\"][\"number\"]).to.eql(\"SAL-000003\"));",
+                  "pm.test(\"data.payment_status = \\\"paid\\\"\", () => pm.expect(j[\"data\"][\"payment_status\"]).to.eql(\"paid\"));",
+                  "pm.test(\"data.items.0.unit_price = \\\"720.00\\\"\", () => pm.expect(j[\"data\"][\"items\"][0][\"unit_price\"]).to.eql(\"720.00\"));",
+                  "pm.test(\"data.items.0.unit_cost is not shown\", () => pm.expect(j[\"data\"][\"items\"][0]).to.not.have.property(\"unit_cost\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Credit sale with a negotiated price",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sales",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sales"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_id\": 1,\n  \"items\": [\n    {\n      \"product_id\": 2,\n      \"quantity\": 10,\n      \"unit_price\": \"140.00\"\n    }\n  ],\n  \"payments\": [\n    {\n      \"account_id\": 1,\n      \"amount\": \"400.00\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.number = \\\"SAL-000004\\\"\", () => pm.expect(j[\"data\"][\"number\"]).to.eql(\"SAL-000004\"));",
+                  "pm.test(\"data.total_amount = \\\"1400.00\\\"\", () => pm.expect(j[\"data\"][\"total_amount\"]).to.eql(\"1400.00\"));",
+                  "pm.test(\"data.balance_due = \\\"1000.00\\\"\", () => pm.expect(j[\"data\"][\"balance_due\"]).to.eql(\"1000.00\"));",
+                  "pm.test(\"data.payment_status = \\\"partial\\\"\", () => pm.expect(j[\"data\"][\"payment_status\"]).to.eql(\"partial\"));",
+                  "pm.test(\"data.items.0.unit_cost = \\\"120.00\\\"\", () => pm.expect(j[\"data\"][\"items\"][0][\"unit_cost\"]).to.eql(\"120.00\"));",
+                  "pm.collectionVariables.set(\"creditSaleId\", j[\"data\"][\"id\"]);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Walk-in sale must be paid in full",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sales",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sales"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"product_id\": 1,\n      \"quantity\": 1\n    }\n  ],\n  \"payments\": [\n    {\n      \"account_id\": 1,\n      \"amount\": \"100.00\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 422\", () => pm.response.to.have.status(422));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"message = \\\"A customer is required for a sale that is not fully paid.\\\"\", () => pm.expect(j[\"message\"]).to.eql(\"A customer is required for a sale that is not fully paid.\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cannot sell more than in stock",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sales",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sales"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_id\": 1,\n  \"items\": [\n    {\n      \"product_id\": 3,\n      \"quantity\": 1000\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 422\", () => pm.response.to.have.status(422));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"message = \\\"Not enough stock for PNT-W4: 59 on hand, 1000 requested.\\\"\", () => pm.expect(j[\"message\"]).to.eql(\"Not enough stock for PNT-W4: 59 on hand, 1000 requested.\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Same product twice is rejected",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sales",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sales"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_id\": 1,\n  \"items\": [\n    {\n      \"product_id\": 1,\n      \"quantity\": 1\n    },\n    {\n      \"product_id\": 1,\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 422\", () => pm.response.to.have.status(422));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"errors.items\\\\.1\\\\.product_id.0 = \\\"Each product may appear only once on a document.\\\"\", () => pm.expect(j[\"errors\"][\"items.1.product_id\"][0]).to.eql(\"Each product may appear only once on a document.\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sales of customer 1",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sales?customer_id=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sales"
+              ],
+              "query": [
+                {
+                  "key": "customer_id",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.0.number = \\\"SAL-000004\\\"\", () => pm.expect(j[\"data\"][0][\"number\"]).to.eql(\"SAL-000004\"));",
+                  "pm.test(\"data.1.number = \\\"SAL-000002\\\"\", () => pm.expect(j[\"data\"][1][\"number\"]).to.eql(\"SAL-000002\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Phase 5 — Money",
+      "description": "Balances are calculated from the ledger, never stored.",
+      "item": [
+        {
+          "name": "Owner sees account balances",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.0.name = \\\"Bank\\\"\", () => pm.expect(j[\"data\"][0][\"name\"]).to.eql(\"Bank\"));",
+                  "pm.test(\"data.0.balance = \\\"11000.00\\\"\", () => pm.expect(j[\"data\"][0][\"balance\"]).to.eql(\"11000.00\"));",
+                  "pm.test(\"data.1.balance = \\\"10300.00\\\"\", () => pm.expect(j[\"data\"][1][\"balance\"]).to.eql(\"10300.00\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Staff sees accounts without balances",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.0.balance is not shown\", () => pm.expect(j[\"data\"][0]).to.not.have.property(\"balance\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Staff collects the rest of the credit sale",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "payments"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"document_type\": \"sale\",\n  \"document_id\": {{creditSaleId}},\n  \"account_id\": 1,\n  \"amount\": \"1000.00\",\n  \"receipt_reference\": \"RCPT-1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.payment_status = \\\"paid\\\"\", () => pm.expect(j[\"data\"][\"payment_status\"]).to.eql(\"paid\"));",
+                  "pm.test(\"data.balance_due = \\\"0.00\\\"\", () => pm.expect(j[\"data\"][\"balance_due\"]).to.eql(\"0.00\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Staff cannot pay a supplier",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "payments"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"document_type\": \"purchase\",\n  \"document_id\": {{purchaseId}},\n  \"account_id\": 2,\n  \"amount\": \"100.00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 403\", () => pm.response.to.have.status(403));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"message = \\\"This action is unauthorized.\\\"\", () => pm.expect(j[\"message\"]).to.eql(\"This action is unauthorized.\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Owner pays the supplier",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "payments"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"document_type\": \"purchase\",\n  \"document_id\": {{purchaseId}},\n  \"account_id\": 2,\n  \"amount\": \"5500.00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.payment_status = \\\"paid\\\"\", () => pm.expect(j[\"data\"][\"payment_status\"]).to.eql(\"paid\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Payment above the balance due is refused",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "payments"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"document_type\": \"purchase\",\n  \"document_id\": 1,\n  \"account_id\": 2,\n  \"amount\": \"8000.00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 422\", () => pm.response.to.have.status(422));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"message = \\\"Payment (8000.00) exceeds the balance due on PUR-000001 (7800.00).\\\"\", () => pm.expect(j[\"message\"]).to.eql(\"Payment (8000.00) exceeds the balance due on PUR-000001 (7800.00).\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Record an expense",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/expenses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "expenses"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_id\": 1,\n  \"amount\": \"1500.00\",\n  \"note\": \"October rent\",\n  \"receipt_reference\": \"RENT-10\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.type = \\\"expense\\\"\", () => pm.expect(j[\"data\"][\"type\"]).to.eql(\"expense\"));",
+                  "pm.test(\"data.amount = \\\"-1500.00\\\"\", () => pm.expect(j[\"data\"][\"amount\"]).to.eql(\"-1500.00\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Expense needs a reason",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/expenses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "expenses"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_id\": 1,\n  \"amount\": \"10.00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 422\", () => pm.response.to.have.status(422));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"errors.note.0 = \\\"A reason is required for every expense.\\\"\", () => pm.expect(j[\"errors\"][\"note\"][0]).to.eql(\"A reason is required for every expense.\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Transfer cash to bank",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transfers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transfers"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"from_account_id\": 1,\n  \"to_account_id\": 2,\n  \"amount\": \"3000.00\",\n  \"note\": \"Bank deposit\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.0.type = \\\"transfer_out\\\"\", () => pm.expect(j[\"data\"][0][\"type\"]).to.eql(\"transfer_out\"));",
+                  "pm.test(\"data.0.amount = \\\"-3000.00\\\"\", () => pm.expect(j[\"data\"][0][\"amount\"]).to.eql(\"-3000.00\"));",
+                  "pm.test(\"data.1.type = \\\"transfer_in\\\"\", () => pm.expect(j[\"data\"][1][\"type\"]).to.eql(\"transfer_in\"));",
+                  "pm.test(\"data.1.amount = \\\"3000.00\\\"\", () => pm.expect(j[\"data\"][1][\"amount\"]).to.eql(\"3000.00\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Owner withdrawal",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/owner-entries",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "owner-entries"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"withdrawal\",\n  \"account_id\": 2,\n  \"amount\": \"1000.00\",\n  \"note\": \"Family expenses\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.type = \\\"owner_withdrawal\\\"\", () => pm.expect(j[\"data\"][\"type\"]).to.eql(\"owner_withdrawal\"));",
+                  "pm.test(\"data.amount = \\\"-1000.00\\\"\", () => pm.expect(j[\"data\"][\"amount\"]).to.eql(\"-1000.00\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cash balance before counting",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "1"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.balance = \\\"6800.00\\\"\", () => pm.expect(j[\"data\"][\"balance\"]).to.eql(\"6800.00\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reconcile the till to the counted amount",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/account-adjustments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "account-adjustments"
+              ]
+            },
+            "description": "The server records the difference: 6750 - 6800.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_id\": 1,\n  \"counted_balance\": \"6750.00\",\n  \"note\": \"Till count, evening\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.type = \\\"adjustment\\\"\", () => pm.expect(j[\"data\"][\"type\"]).to.eql(\"adjustment\"));",
+                  "pm.test(\"data.amount = \\\"-50.00\\\"\", () => pm.expect(j[\"data\"][\"amount\"]).to.eql(\"-50.00\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cash ledger, newest first",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/account-transactions?account_id=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "account-transactions"
+              ],
+              "query": [
+                {
+                  "key": "account_id",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.0.type = \\\"adjustment\\\"\", () => pm.expect(j[\"data\"][0][\"type\"]).to.eql(\"adjustment\"));",
+                  "pm.test(\"data.1.type = \\\"transfer_out\\\"\", () => pm.expect(j[\"data\"][1][\"type\"]).to.eql(\"transfer_out\"));",
+                  "pm.test(\"data.2.type = \\\"expense\\\"\", () => pm.expect(j[\"data\"][2][\"type\"]).to.eql(\"expense\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Business summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/summary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "summary"
+              ]
+            },
+            "description": "Net worth = money + inventory at cost + receivables - payables.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.accounts.total = \\\"14250.00\\\"\", () => pm.expect(j[\"data\"][\"accounts\"][\"total\"]).to.eql(\"14250.00\"));",
+                  "pm.test(\"data.inventory.at_cost = \\\"101850.00\\\"\", () => pm.expect(j[\"data\"][\"inventory\"][\"at_cost\"]).to.eql(\"101850.00\"));",
+                  "pm.test(\"data.receivables = \\\"525.00\\\"\", () => pm.expect(j[\"data\"][\"receivables\"]).to.eql(\"525.00\"));",
+                  "pm.test(\"data.payables = \\\"7800.00\\\"\", () => pm.expect(j[\"data\"][\"payables\"]).to.eql(\"7800.00\"));",
+                  "pm.test(\"data.net_worth = \\\"108825.00\\\"\", () => pm.expect(j[\"data\"][\"net_worth\"]).to.eql(\"108825.00\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Staff cannot see the summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/summary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "summary"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

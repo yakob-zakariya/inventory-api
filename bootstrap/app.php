@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Spatie\Permission\Exceptions\UnauthorizedException;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 use Spatie\Permission\Middleware\RoleMiddleware;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -35,8 +36,11 @@ return Application::configure(basePath: dirname(__DIR__))
             ? response()->json(['message' => 'Resource not found.'], 404)
             : null);
 
-        // Use the same 403 message as Laravel's own authorization failures.
+        // Every 403 (permission middleware, Form Request authorize(), policies) has the same body.
         $exceptions->render(fn (UnauthorizedException $e, Request $request) => $rendersJson($request)
             ? response()->json(['message' => 'This action is unauthorized.'], 403)
+            : null);
+        $exceptions->render(fn (AccessDeniedHttpException $e, Request $request) => $rendersJson($request)
+            ? response()->json(['message' => $e->getMessage() ?: 'This action is unauthorized.'], 403)
             : null);
     })->create();

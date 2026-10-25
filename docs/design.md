@@ -113,14 +113,16 @@ erDiagram
 - Supplier payable = sum of balance due on the supplier's active purchases.
 - Customer receivable = sum of balance due on the customer's active sales.
 - Simple profit = sum over sale items of (unit_price - unit_cost) x quantity, minus net expenses, for active documents in a period.
+- Inventory value = sum over products of stock x `cost_price` (at cost; the value at selling price is shown for information only).
+- Net worth = sum of account balances + inventory value + customer receivables - supplier payables.
 
 If reports ever become slow, cached columns may be added, but only alongside the verify command (section 12) that checks them against the ledgers.
 
 ## 8. Business rules
 
-1. Stock never goes negative. Sales, negative adjustments, and voids that remove stock check current stock while holding a lock on the product rows, locked in a consistent order (by id) to avoid deadlocks. Lock order in every transaction: product rows (by id) first, then the `document_sequences` row.
+1. Stock never goes negative. Sales, negative adjustments, and voids that remove stock check current stock while holding a lock on the product rows, locked in a consistent order (by id) to avoid deadlocks. Lock order in every transaction: product rows (by id), then document rows, then the `document_sequences` row, then account rows (by id). Every money ledger write locks its account row.
 2. A sale that is not fully paid when created requires a customer. Walk-in sales must be paid in full.
-3. A payment cannot exceed the balance due and cannot be recorded against a voided document.
+3. A payment cannot exceed the balance due (422) and cannot be recorded against a voided document (409). Recording a payment locks the document row first. A payment against a purchase also needs `purchases.create`, so staff can only take payments for sales.
 4. A document can be voided only if its net payments are zero (any payments must be voided first) and the reversal passes the stock rule.
 5. Voiding requires a reason. The system records who voided it and when, and adds reversing stock movements. Voided documents remain visible, marked as voided, and are excluded from totals and reports.
 6. A wrong ledger entry (payment, expense, owner entry) is corrected by a reversal row that points to the original and has the opposite amount. Transfers are reversed as a pair.
@@ -165,6 +167,8 @@ Prefix `/api/v1`. All routes except login need a Sanctum token. Permissions are 
 - Viewing: purchases need `purchases.create`. Sales are visible to any logged-in user, but sale items show `unit_cost` only to users with `reports.view`.
 - Money: `GET /account-transactions`, `POST /payments` (against a document), `POST /expenses`, `POST /transfers`, `POST /owner-entries`, `POST /account-adjustments`, `POST /account-transactions/{id}/reverse`.
 - Reports: stock levels and low stock, supplier payables, customer receivables, account balances, cash flow, profit.
+- `GET /reports/summary` (`reports.view`): account balances, inventory value, receivables, payables and net worth, as of now.
+- Account balances are shown on accounts only to users with `accounts.manage` or `reports.view`.
 
 ## 11. Permissions (v1 proposal)
 
@@ -200,7 +204,7 @@ The repository starts from a fresh Laravel skeleton. Each phase is built on its 
 2. **Master data:** categories, suppliers, customers, products, accounts.
 3. **Stock ledger and adjustments.**
 4. **Purchases and sales:** numbering, nested items, stock rules, and the payments sent with a new document (this phase creates `account_transactions` for `sale_payment` and `purchase_payment`).
-5. **Money ledger:** later payments against documents, expenses, transfers, owner entries, reconciliation.
+5. **Money ledger:** later payments against documents, expenses, transfers, owner entries, reconciliation, account balances, and the business summary report.
 6. **Voiding:** documents and ledger entries.
 7. **Reports.**
 8. **Professional finish:** API docs, README, verify command, backups, cloud deployment, CI.
@@ -210,6 +214,7 @@ Each phase ends with passing tests and a commit before the next begins.
 ## 14. Open questions and later work
 
 - Multi-tenancy, when real shops are waiting for it.
+- Business summary as of a past date: needs a business date on stock movements and historical cost prices.
 - Costing method for profit (current: product cost at time of sale; later: weighted average).
 - Expense categories (small upgrade: a nullable category on expenses).
 - Returns and refunds workflow, due dates, credit limits.
