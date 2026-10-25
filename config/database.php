@@ -64,6 +64,22 @@ return [
             ]) : [],
         ],
 
+        // Used only by tests/Concurrency (see docker-compose.yml): SQLite ignores row locks.
+        'mysql_testing' => [
+            'driver' => 'mysql',
+            'host' => env('DB_TEST_MYSQL_HOST', '127.0.0.1'),
+            'port' => env('DB_TEST_MYSQL_PORT', '33060'),
+            'database' => env('DB_TEST_MYSQL_DATABASE', 'inventory_test'),
+            'username' => env('DB_TEST_MYSQL_USERNAME', 'inventory'),
+            'password' => env('DB_TEST_MYSQL_PASSWORD', 'secret'),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'engine' => null,
+        ],
+
         'mariadb' => [
             'driver' => 'mariadb',
             'url' => env('DB_URL'),
