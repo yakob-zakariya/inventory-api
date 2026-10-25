@@ -1,3 +1,48 @@
+# Project: inventory, sales and money management API
+
+Laravel 13 JSON API (Sanctum tokens) for a small trading shop. Single-tenant: one deployment and one database per shop. There is no tenant concept in the code.
+The full design and the reasons behind it are in `docs/design.md`. Read it before changing the data model or any business rule.
+
+## Commands
+- Run tests (Pest): `php artisan test --compact`, using the narrowest set while working (a file path or `--filter`)
+- Format: `vendor/bin/pint --dirty --format agent`
+- Reset local data: `php artisan migrate:fresh --seed`
+- List routes and their middleware: `php artisan route:list`
+- Check data consistency: `php artisan inventory:verify` (once it exists)
+
+## Architecture rules (never break these)
+- Stock and money are append-only ledgers (`stock_movements`, `account_transactions`). Never update or delete ledger rows or posted documents.
+- Never store a value that can be calculated (stock, balances, paid amounts, payment status). Calculate it from the ledgers.
+- Corrections are made by voiding or reversing with a required reason, never by editing amounts or quantities.
+- Money is decimal(12,2). Do arithmetic in whole cents. Quantities are integers.
+- Prices and costs are copied onto document items when the document is created.
+- Any write that touches more than one row runs inside `DB::transaction`. Anything that depends on current stock or balance locks the rows first (`lockForUpdate`), in id order.
+- Authorization uses spatie/laravel-permission. Check named permissions (for example `sales.void`) with `permission:` middleware or `$user->can()`, never role names. Permissions and roles are created in a seeder; run `php artisan permission:cache-reset` after changing them.
+- Document numbers (PUR-000123, SAL-000123) come from the `document_sequences` table: lock the row inside the transaction, increment, then format.
+- Keep data access in Eloquent models and Form Requests. No scattered raw queries and no hard-coded single-shop assumptions, so multi-tenancy stays possible later.
+- Use `Relation::morphMap()` for polymorphic aliases, never `enforceMorphMap()` (it breaks Sanctum tokens).
+
+## Conventions
+- Routes live under `/api/v1`. Controllers are thin and live in `App\Http\Controllers\Api\V1`.
+- Validation in Form Requests. Output through API Resources. Never return models directly.
+- Status codes: 401 not logged in, 403 not allowed, 404 not found, 409 conflict, 422 validation or business-rule failure.
+- Enums for fixed value sets (roles, movement types, transaction types, statuses).
+- Exclude soft-deleted products and other inactive records in `exists` rules where they must not be used.
+
+## Workflow
+- For anything that touches several files or changes the data model, propose a plan first and wait for approval.
+- Write or update tests with every change, in Pest (`php artisan make:test --pest`).
+- Run the relevant tests as you work, and the full suite before saying a phase is done. Report the result.
+- The rules in this file are the project's business rules. If they conflict with the generic Laravel Boost guidelines, follow this file.
+- Keep changes small and commit after each working step with a clear message.
+- If a request conflicts with `docs/design.md`, say so instead of silently working around it.
+- Concurrency tests need MySQL or PostgreSQL; SQLite ignores row locks.
+
+
+
+
+
+
 <laravel-boost-guidelines>
 === foundation rules ===
 
