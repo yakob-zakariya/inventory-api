@@ -29,6 +29,10 @@ class ProductResource extends JsonResource
             'cost_price' => $this->cost_price,
             'selling_price' => $this->selling_price,
             'reorder_level' => $this->reorder_level,
+            'stock' => $this->when(
+                array_key_exists('stock', $this->getAttributes()),
+                fn () => (int) $this->stock,
+            ),
             'created_by' => $this->created_by,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

@@ -18,6 +18,7 @@ class ProductController extends Controller
     {
         $products = Product::query()
             ->with('category')
+            ->withStock()
             ->search($request->query('search'))
             ->when($request->integer('category_id'), fn ($query, int $categoryId) => $query->where('category_id', $categoryId))
             ->orderBy('name')
@@ -30,19 +31,19 @@ class ProductController extends Controller
     {
         $product = Product::create($request->validated());
 
-        return (new ProductResource($product->load('category')))->response()->setStatusCode(201);
+        return (new ProductResource($this->loadDetails($product)))->response()->setStatusCode(201);
     }
 
     public function show(Product $product): ProductResource
     {
-        return new ProductResource($product->load('category'));
+        return new ProductResource($this->loadDetails($product));
     }
 
     public function update(UpdateProductRequest $request, Product $product): ProductResource
     {
         $product->update($request->validated());
 
-        return new ProductResource($product->load('category'));
+        return new ProductResource($this->loadDetails($product));
     }
 
     /**
@@ -53,5 +54,13 @@ class ProductController extends Controller
         $product->delete();
 
         return response()->noContent();
+    }
+
+    /**
+     * Load what a single-product response shows: its category and current stock.
+     */
+    private function loadDetails(Product $product): Product
+    {
+        return $product->load('category')->loadSum('stockMovements as stock', 'quantity');
     }
 }

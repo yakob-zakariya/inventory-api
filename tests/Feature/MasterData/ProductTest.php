@@ -2,6 +2,7 @@
 
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\StockMovement;
 
 function productPayload(array $overrides = []): array
 {
@@ -65,6 +66,18 @@ it('searches products by name or sku and filters by category', function () {
     $this->getJson('/api/v1/products?search=cement')->assertJsonCount(1, 'data');
     $this->getJson('/api/v1/products?search=PNT')->assertJsonCount(2, 'data');
     $this->getJson("/api/v1/products?category_id={$cement->category_id}")->assertJsonCount(2, 'data');
+});
+
+it('shows stock calculated from the stock movements', function () {
+    actingAsStaff();
+    $product = Product::factory()->create();
+    $other = Product::factory()->create();
+    StockMovement::factory()->for($product)->create(['quantity' => 10]);
+    StockMovement::factory()->for($product)->create(['quantity' => -3]);
+
+    $this->getJson("/api/v1/products/{$product->id}")->assertJsonPath('data.stock', 7);
+    $this->getJson("/api/v1/products/{$other->id}")->assertJsonPath('data.stock', 0);
+    $this->getJson("/api/v1/products?search={$product->sku}")->assertJsonPath('data.0.stock', 7);
 });
 
 it('lets the owner update a product', function () {
