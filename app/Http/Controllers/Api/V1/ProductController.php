@@ -2,15 +2,18 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Exceptions\ConflictException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\StoreProductRequest;
 use App\Http\Requests\Api\V1\UpdateProductRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
+use App\Services\StockLedger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 
 class ProductController extends Controller
 {
@@ -48,10 +51,20 @@ class ProductController extends Controller
 
     /**
      * Soft-delete the product so it can no longer be used on new documents.
+     * Refused while it still has stock on hand.
      */
-    public function destroy(Product $product): Response
+    public function destroy(Product $product, StockLedger $ledger): Response
     {
-        $product->delete();
+        DB::transaction(function () use ($product, $ledger) {
+            $product = $ledger->lockProducts([$product->id])->first();
+            $stock = $ledger->stockOf($product);
+
+            if ($stock !== 0) {
+                throw new ConflictException("This product still has {$stock} in stock. Adjust stock to zero before deleting it.");
+            }
+
+            $product->delete();
+        });
 
         return response()->noContent();
     }

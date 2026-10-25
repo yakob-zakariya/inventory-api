@@ -102,6 +102,29 @@ it('soft-deletes a product and hides it afterwards', function () {
     $this->getJson('/api/v1/products')->assertJsonCount(0, 'data');
 });
 
+it('refuses to delete a product that still has stock', function () {
+    actingAsOwner();
+    $product = Product::factory()->create();
+    StockMovement::factory()->for($product)->create(['quantity' => 4]);
+
+    $this->deleteJson("/api/v1/products/{$product->id}")
+        ->assertConflict()
+        ->assertExactJson(['message' => 'This product still has 4 in stock. Adjust stock to zero before deleting it.']);
+
+    expect($product->fresh()->trashed())->toBeFalse();
+});
+
+it('deletes a product whose movements net to zero', function () {
+    actingAsOwner();
+    $product = Product::factory()->create();
+    StockMovement::factory()->for($product)->create(['quantity' => 4]);
+    StockMovement::factory()->for($product)->create(['quantity' => -4]);
+
+    $this->deleteJson("/api/v1/products/{$product->id}")->assertNoContent();
+
+    expect($product->fresh()->trashed())->toBeTrue();
+});
+
 it('forbids staff from changing products', function () {
     actingAsStaff();
     $product = Product::factory()->create();
