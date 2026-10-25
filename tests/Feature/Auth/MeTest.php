@@ -18,7 +18,7 @@ it('returns staff with only their permissions', function () {
     $this->getJson('/api/v1/auth/me')
         ->assertOk()
         ->assertJsonPath('data.roles', ['staff'])
-        ->assertJsonPath('data.permissions', ['payments.record', 'sales.create']);
+        ->assertJsonPath('data.permissions', ['customers.manage', 'payments.record', 'sales.create']);
 });
 
 it('requires authentication', function () {
