@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\AccountTransactionController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\CustomerController;
+use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\ProductController;
 use App\Http\Controllers\Api\V1\PurchaseController;
 use App\Http\Controllers\Api\V1\SaleController;
@@ -68,6 +69,11 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::post('sales', [SaleController::class, 'store'])
             ->middleware('permission:'.Permission::SalesCreate->value)
             ->name('sales.store');
+
+        // Later payments against a purchase or sale (purchases also need purchases.create).
+        Route::post('payments', PaymentController::class)
+            ->middleware('permission:'.Permission::PaymentsRecord->value)
+            ->name('payments.store');
 
         // Money ledger and reports.
         Route::middleware('permission:'.Permission::ReportsView->value)->group(function () {
