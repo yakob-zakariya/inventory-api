@@ -3,6 +3,7 @@
 use App\Exceptions\BusinessRuleException;
 use App\Exceptions\ConflictException;
 use App\Models\User;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Route;
 
 beforeEach(function () {
@@ -10,6 +11,7 @@ beforeEach(function () {
         Route::get('business-rule', fn () => throw new BusinessRuleException('Not enough stock.'));
         Route::get('conflict', fn () => throw new ConflictException('Category is in use.'));
         Route::get('missing-model', fn () => User::findOrFail(999));
+        Route::get('policy-denied', fn () => throw new AuthorizationException);
         Route::get('needs-permission', fn () => 'ok')->middleware(['auth:sanctum', 'permission:users.manage']);
     });
 });
@@ -48,6 +50,14 @@ it('returns 403 json when a permission is missing', function () {
     actingAsStaff();
 
     $this->getJson('/api/v1/_test/needs-permission')
+        ->assertForbidden()
+        ->assertExactJson(['message' => 'This action is unauthorized.']);
+});
+
+it('returns a plain 403 without debug details when authorization fails elsewhere', function () {
+    config(['app.debug' => true]);
+
+    $this->getJson('/api/v1/_test/policy-denied')
         ->assertForbidden()
         ->assertExactJson(['message' => 'This action is unauthorized.']);
 });
