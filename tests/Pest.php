@@ -3,6 +3,7 @@
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
 use Tests\ConcurrencyTestCase;
 use Tests\TestCase;
@@ -56,4 +57,59 @@ function actingAsStaff(): User
     Sanctum::actingAs($user);
 
     return $user;
+}
+
+/**
+ * Run each task in its own forked process, all starting at the same moment, and return
+ * what each one returned (or "ExceptionClass: message" if it threw). Concurrency tests only:
+ * the children open their own database connections.
+ *
+ * @param  list<Closure(): string>  $tasks
+ * @return list<string>
+ */
+function inParallel(array $tasks): array
+{
+    $resultsDir = storage_path('framework/testing/concurrency-'.uniqid());
+    mkdir($resultsDir, recursive: true);
+    $startAt = microtime(true) + 0.5;
+
+    // Children must open their own connections, not share the parent's socket.
+    DB::disconnect();
+
+    $children = [];
+
+    foreach ($tasks as $index => $task) {
+        $pid = pcntl_fork();
+
+        if ($pid === 0) {
+            try {
+                while (microtime(true) < $startAt) {
+                    usleep(1_000);
+                }
+
+                $outcome = $task();
+            } catch (Throwable $e) {
+                $outcome = class_basename($e).': '.$e->getMessage();
+            }
+
+            file_put_contents("{$resultsDir}/{$index}", $outcome);
+
+            // Skip PHPUnit's shutdown handlers in the child.
+            posix_kill(posix_getpid(), SIGKILL);
+        }
+
+        $children[] = $pid;
+    }
+
+    foreach ($children as $pid) {
+        pcntl_waitpid($pid, $status);
+    }
+
+    $outcomes = array_map(fn ($index) => file_get_contents("{$resultsDir}/{$index}"), array_keys($tasks));
+    array_map('unlink', glob("{$resultsDir}/*"));
+    rmdir($resultsDir);
+
+    DB::reconnect();
+
+    return $outcomes;
 }
