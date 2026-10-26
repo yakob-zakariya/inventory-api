@@ -5458,6 +5458,470 @@
           ]
         }
       ]
+    },
+    {
+      "name": "Phase 7 — Reports",
+      "description": "Reports for the current month (the demo data is dated today). The list reports are filters on the normal lists.",
+      "item": [
+        {
+          "name": "Profit this month",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/profit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "profit"
+              ]
+            },
+            "description": "Voided sales are left out. The whole month's rent counts against a few days of sales, hence the loss.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.sales = \\\"6825.00\\\"\", () => pm.expect(j[\"data\"][\"sales\"]).to.eql(\"6825.00\"));",
+                  "pm.test(\"data.cost_of_sales = \\\"5900.00\\\"\", () => pm.expect(j[\"data\"][\"cost_of_sales\"]).to.eql(\"5900.00\"));",
+                  "pm.test(\"data.gross_profit = \\\"925.00\\\"\", () => pm.expect(j[\"data\"][\"gross_profit\"]).to.eql(\"925.00\"));",
+                  "pm.test(\"data.expenses = \\\"1500.00\\\"\", () => pm.expect(j[\"data\"][\"expenses\"]).to.eql(\"1500.00\"));",
+                  "pm.test(\"data.net_profit = \\\"-575.00\\\"\", () => pm.expect(j[\"data\"][\"net_profit\"]).to.eql(\"-575.00\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Profit by month",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/profit?group_by=month",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "profit"
+              ],
+              "query": [
+                {
+                  "key": "group_by",
+                  "value": "month"
+                }
+              ]
+            },
+            "description": "group_by=day|month adds a series with every period present, for charts.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.series.0.net_profit = \\\"-575.00\\\"\", () => pm.expect(j[\"data\"][\"series\"][0][\"net_profit\"]).to.eql(\"-575.00\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unknown grouping",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/profit?group_by=week",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "profit"
+              ],
+              "query": [
+                {
+                  "key": "group_by",
+                  "value": "week"
+                }
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 422\", () => pm.response.to.have.status(422));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"errors.group_by.0 = \\\"The selected group by is invalid.\\\"\", () => pm.expect(j[\"errors\"][\"group_by\"][0]).to.eql(\"The selected group by is invalid.\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cash flow, all accounts",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/cash-flow",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "cash-flow"
+              ]
+            },
+            "description": "Transfers are left out across all accounts. Reversed entries net into the type they cancel. Closing = the summary's account total.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.opening_balance = \\\"25000.00\\\"\", () => pm.expect(j[\"data\"][\"opening_balance\"]).to.eql(\"25000.00\"));",
+                  "pm.test(\"data.money_in = \\\"6300.00\\\"\", () => pm.expect(j[\"data\"][\"money_in\"]).to.eql(\"6300.00\"));",
+                  "pm.test(\"data.money_out = \\\"17050.00\\\"\", () => pm.expect(j[\"data\"][\"money_out\"]).to.eql(\"17050.00\"));",
+                  "pm.test(\"data.closing_balance = \\\"14250.00\\\"\", () => pm.expect(j[\"data\"][\"closing_balance\"]).to.eql(\"14250.00\"));",
+                  "pm.test(\"data.by_type.0.type = \\\"sale_payment\\\"\", () => pm.expect(j[\"data\"][\"by_type\"][0][\"type\"]).to.eql(\"sale_payment\"));",
+                  "pm.test(\"data.by_type.0.in = \\\"6300.00\\\"\", () => pm.expect(j[\"data\"][\"by_type\"][0][\"in\"]).to.eql(\"6300.00\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cash flow, cash drawer",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/cash-flow?account_id=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "cash-flow"
+              ],
+              "query": [
+                {
+                  "key": "account_id",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "For one account, transfers are real money in or out.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.account.name = \\\"Cash drawer\\\"\", () => pm.expect(j[\"data\"][\"account\"][\"name\"]).to.eql(\"Cash drawer\"));",
+                  "pm.test(\"data.closing_balance = \\\"6750.00\\\"\", () => pm.expect(j[\"data\"][\"closing_balance\"]).to.eql(\"6750.00\"));",
+                  "pm.test(\"data.by_type.2.type = \\\"transfer_out\\\"\", () => pm.expect(j[\"data\"][\"by_type\"][2][\"type\"]).to.eql(\"transfer_out\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Staff cannot see reports",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/cash-flow",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "cash-flow"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Customers who owe",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/customers?has_balance=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "customers"
+              ],
+              "query": [
+                {
+                  "key": "has_balance",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.0.name = \\\"Demo Credit Customer\\\"\", () => pm.expect(j[\"data\"][0][\"name\"]).to.eql(\"Demo Credit Customer\"));",
+                  "pm.test(\"data.0.receivable = \\\"525.00\\\"\", () => pm.expect(j[\"data\"][0][\"receivable\"]).to.eql(\"525.00\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Suppliers we owe",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/suppliers?has_balance=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "suppliers"
+              ],
+              "query": [
+                {
+                  "key": "has_balance",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.0.payable = \\\"7800.00\\\"\", () => pm.expect(j[\"data\"][0][\"payable\"]).to.eql(\"7800.00\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Out of stock products",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products?stock=out",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "stock",
+                  "value": "out"
+                }
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.0.sku = \\\"TAPE-1\\\"\", () => pm.expect(j[\"data\"][0][\"sku\"]).to.eql(\"TAPE-1\"));",
+                  "pm.test(\"data.0.stock = 0\", () => pm.expect(j[\"data\"][0][\"stock\"]).to.eql(0));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ]
 }

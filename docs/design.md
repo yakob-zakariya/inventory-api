@@ -178,6 +178,10 @@ Prefix `/api/v1`. All routes except login need a Sanctum token. Permissions are 
 - Money: `GET /account-transactions`, `POST /payments` (against a document), `POST /expenses`, `POST /transfers`, `POST /owner-entries`, `POST /account-adjustments`, `POST /account-transactions/{id}/reverse`.
 - Reports: stock levels and low stock, supplier payables, customer receivables, account balances, cash flow, profit.
 - `GET /reports/summary` (`reports.view`): account balances, inventory value, receivables, payables and net worth, as of now.
+- `GET /reports/profit` and `GET /reports/cash-flow` (`reports.view`), for a period: `from` and `to` (both days included; default the current month) and optional `group_by=day|month` for a series with every period present (day grouping up to a year).
+  - Profit: sales and cost of sales from the active sales' item snapshots, minus net expenses (expenses less their reversals, each on its own date).
+  - Cash flow: opening balance, money in and out by type, closing balance, for all accounts or one (`account_id`). A reversal counts under the type it cancels. Across all accounts, transfers are left out (they only move money inside the shop); for one account they are included. Opening + in - out = closing.
+  - The other planned reports are list filters: stock levels (`/products?stock=low|out&sort=stock`), payables and receivables (`/suppliers` and `/customers` with `?has_balance=1`), account balances (`/accounts`).
 - Account balances are shown on accounts only to users with `accounts.manage` or `reports.view`.
 - Lists are paginated, 10 rows per page by default; `per_page` takes 1 to 100.
 - Customers show `receivable` (what they owe on active sales) to everyone, since staff take payments and already see each sale's balance due. Suppliers show `payable` (what the shop owes on active purchases) only to users with `purchases.create` or `reports.view`. `?has_balance=1` lists only those with something owed. Both are calculated in SQL with the list.
