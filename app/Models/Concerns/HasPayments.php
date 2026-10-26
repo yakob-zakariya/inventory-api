@@ -85,14 +85,42 @@ trait HasPayments
     #[Scope]
     protected function owing(Builder $query): void
     {
-        $paidCents = AccountTransaction::query()
+        $query
+            ->where('status', DocumentStatus::Active->value)
+            ->where(DB::raw('round(total_amount * 100)'), '>', $this->paidCentsSubquery());
+    }
+
+    /**
+     * Active documents with the given payment status, calculated in SQL like paymentStatus().
+     *
+     * @param  Builder<self>  $query
+     */
+    #[Scope]
+    protected function withPaymentStatus(Builder $query, PaymentStatus $status): void
+    {
+        $paid = $this->paidCentsSubquery();
+        $total = DB::raw('round(total_amount * 100)');
+
+        $query->where('status', DocumentStatus::Active->value);
+
+        match ($status) {
+            PaymentStatus::Unpaid => $query->where($paid, '<=', 0),
+            PaymentStatus::Partial => $query->where($paid, '>', 0)->where($paid, '<', $total),
+            PaymentStatus::Paid => $query->where($paid, '>=', $total),
+        };
+    }
+
+    /**
+     * What was paid on the document row in the outer query, in cents (positive for payments).
+     *
+     * @return Builder<AccountTransaction>
+     */
+    private function paidCentsSubquery(): Builder
+    {
+        return AccountTransaction::query()
             ->selectRaw('coalesce(sum(round(amount * 100)), 0) * ?', [static::paymentSign()])
             ->where('reference_type', $this->getMorphClass())
             ->whereColumn('reference_id', $this->getQualifiedKeyName());
-
-        $query
-            ->where('status', DocumentStatus::Active->value)
-            ->where(DB::raw('round(total_amount * 100)'), '>', $paidCents);
     }
 
     public function paidCents(): int

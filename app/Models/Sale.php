@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\DocumentStatus;
+use App\Enums\PaymentStatus;
 use App\Models\Concerns\HasPayments;
 use App\Models\Concerns\RecordsCreator;
 use App\Services\SaleRecorder;
@@ -86,13 +87,19 @@ class Sale extends Model
 
     /**
      * @param  Builder<self>  $query
-     * @param  array{customer_id?: int, status?: string, from?: string, to?: string}  $filters
+     * @param  array{customer_id?: int, search?: string, payment_status?: string, status?: string, from?: string, to?: string}  $filters
      */
     #[Scope]
     protected function filter(Builder $query, array $filters): void
     {
         $query
             ->when($filters['customer_id'] ?? null, fn (Builder $query, $id) => $query->where('customer_id', $id))
+            ->when($filters['search'] ?? null, fn (Builder $query, string $term) => $query->where(
+                fn (Builder $query) => $query
+                    ->whereLike('number', "%{$term}%")
+                    ->orWhereHas('customer', fn (Builder $query) => $query->whereLike('name', "%{$term}%")),
+            ))
+            ->when($filters['payment_status'] ?? null, fn (Builder $query, string $status) => $query->withPaymentStatus(PaymentStatus::from($status)))
             ->when($filters['status'] ?? null, fn (Builder $query, $status) => $query->where('status', $status))
             ->when($filters['from'] ?? null, fn (Builder $query, $from) => $query->whereDate('sale_date', '>=', $from))
             ->when($filters['to'] ?? null, fn (Builder $query, $to) => $query->whereDate('sale_date', '<=', $to));
