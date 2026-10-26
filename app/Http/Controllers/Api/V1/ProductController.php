@@ -4,28 +4,29 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Exceptions\ConflictException;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\IndexProductRequest;
 use App\Http\Requests\Api\V1\StoreProductRequest;
 use App\Http\Requests\Api\V1\UpdateProductRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
 use App\Services\StockLedger;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 
 class ProductController extends Controller
 {
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(IndexProductRequest $request): AnonymousResourceCollection
     {
         $products = Product::query()
             ->with('category')
             ->withStock()
             ->search($request->query('search'))
             ->when($request->integer('category_id'), fn ($query, int $categoryId) => $query->where('category_id', $categoryId))
-            ->orderBy('name')
-            ->paginate();
+            ->when($request->validated('stock'), fn ($query, string $level) => $query->stockLevel($level))
+            ->sortBy($request->validated('sort'))
+            ->paginate($request->perPage());
 
         return ProductResource::collection($products);
     }

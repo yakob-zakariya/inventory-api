@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasOutstandingDocuments;
 use App\Models\Concerns\RecordsCreator;
 use Database\Factories\SupplierFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -15,12 +16,20 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Supplier extends Model
 {
     /** @use HasFactory<SupplierFactory> */
-    use HasFactory, RecordsCreator, SoftDeletes;
+    use HasFactory, HasOutstandingDocuments, RecordsCreator, SoftDeletes;
 
     /**
      * Rows per page in API lists.
      */
     protected $perPage = 10;
+
+    /**
+     * Purchases make up what the shop owes this supplier.
+     */
+    protected static function documentClass(): string
+    {
+        return Purchase::class;
+    }
 
     /**
      * Filter by a partial match on name or phone.

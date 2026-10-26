@@ -36,12 +36,14 @@ class PurchaseResource extends JsonResource
             'note' => $this->note,
             'voided_at' => $this->voided_at,
             'voided_by' => $this->voided_by,
+            'voided_by_user' => $this->voider?->only(['id', 'name']),
             'void_reason' => $this->void_reason,
             'items' => PurchaseItemResource::collection($this->whenLoaded('items')),
             'payments' => $this->whenLoaded('payments', fn () => $this->payments->map(
                 fn ($payment) => new DocumentPaymentResource($payment, Purchase::paymentSign()),
             )),
             'created_by' => $this->created_by,
+            'created_by_user' => $this->creator?->only(['id', 'name']),
             'created_at' => $this->created_at,
         ];
     }

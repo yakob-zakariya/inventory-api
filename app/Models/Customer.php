@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasOutstandingDocuments;
 use App\Models\Concerns\RecordsCreator;
 use Database\Factories\CustomerFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -15,12 +16,20 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Customer extends Model
 {
     /** @use HasFactory<CustomerFactory> */
-    use HasFactory, RecordsCreator, SoftDeletes;
+    use HasFactory, HasOutstandingDocuments, RecordsCreator, SoftDeletes;
 
     /**
      * Rows per page in API lists.
      */
     protected $perPage = 10;
+
+    /**
+     * Sales make up what the customer owes.
+     */
+    protected static function documentClass(): string
+    {
+        return Sale::class;
+    }
 
     /**
      * Filter by a partial match on name or phone.

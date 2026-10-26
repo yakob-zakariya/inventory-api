@@ -20,11 +20,11 @@ class AccountTransactionController extends Controller
     public function index(IndexAccountTransactionRequest $request): AnonymousResourceCollection
     {
         $transactions = AccountTransaction::query()
-            ->with(['account', 'reversal:id,reverses_transaction_id'])
+            ->with(['account', 'reference', 'creator:id,name', 'reversal:id,reverses_transaction_id'])
             ->filter($request->validated())
             ->latest('transaction_date')
             ->latest('id')
-            ->paginate();
+            ->paginate($request->perPage());
 
         return AccountTransactionResource::collection($transactions);
     }

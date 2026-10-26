@@ -179,6 +179,10 @@ Prefix `/api/v1`. All routes except login need a Sanctum token. Permissions are 
 - Reports: stock levels and low stock, supplier payables, customer receivables, account balances, cash flow, profit.
 - `GET /reports/summary` (`reports.view`): account balances, inventory value, receivables, payables and net worth, as of now.
 - Account balances are shown on accounts only to users with `accounts.manage` or `reports.view`.
+- Lists are paginated, 10 rows per page by default; `per_page` takes 1 to 100.
+- Customers show `receivable` (what they owe on active sales) to everyone, since staff take payments and already see each sale's balance due. Suppliers show `payable` (what the shop owes on active purchases) only to users with `purchases.create` or `reports.view`. `?has_balance=1` lists only those with something owed. Both are calculated in SQL with the list.
+- Products: `?stock=low` (above zero, at or below the reorder level) or `?stock=out` (zero or less); `?sort=name|stock|-stock`.
+- Ledger rows and documents name their documents and users for display: `reference_number` (for example SAL-000012) on stock movements and account transactions, `created_by_user` and `voided_by_user` as `{id, name}`.
 
 ## 11. Permissions (v1 proposal)
 
