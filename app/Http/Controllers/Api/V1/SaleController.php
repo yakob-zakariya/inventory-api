@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\IndexSaleRequest;
 use App\Http\Requests\Api\V1\StoreSaleRequest;
+use App\Http\Requests\Api\V1\UpdateSaleRequest;
 use App\Http\Requests\Api\V1\VoidDocumentRequest;
 use App\Http\Resources\DocumentPreviewResource;
 use App\Http\Resources\SaleResource;
@@ -47,6 +48,16 @@ class SaleController extends Controller
 
     public function show(Sale $sale): SaleResource
     {
+        return new SaleResource($this->loadDetails($sale));
+    }
+
+    /**
+     * Edit the sale's non-financial fields. Allowed on voided sales too.
+     */
+    public function update(UpdateSaleRequest $request, Sale $sale): SaleResource
+    {
+        $sale->update($request->validated());
+
         return new SaleResource($this->loadDetails($sale));
     }
 

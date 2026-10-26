@@ -74,6 +74,7 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::middleware('permission:'.Permission::PurchasesCreate->value)->group(function () {
             Route::post('purchases/preview', [PurchaseController::class, 'preview'])->name('purchases.preview');
             Route::apiResource('purchases', PurchaseController::class)->only(['index', 'store', 'show']);
+            Route::patch('purchases/{purchase}', [PurchaseController::class, 'update'])->name('purchases.update');
         });
         Route::post('purchases/{purchase}/void', [PurchaseController::class, 'void'])
             ->middleware('permission:'.Permission::PurchasesVoid->value)
@@ -87,6 +88,9 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::post('sales', [SaleController::class, 'store'])
             ->middleware('permission:'.Permission::SalesCreate->value)
             ->name('sales.store');
+        Route::patch('sales/{sale}', [SaleController::class, 'update'])
+            ->middleware('permission:'.Permission::SalesCreate->value)
+            ->name('sales.update');
         Route::post('sales/{sale}/void', [SaleController::class, 'void'])
             ->middleware('permission:'.Permission::SalesVoid->value)
             ->name('sales.void');
