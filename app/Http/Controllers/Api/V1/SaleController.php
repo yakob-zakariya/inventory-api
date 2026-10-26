@@ -23,7 +23,7 @@ class SaleController extends Controller
             ->filter($request->validated())
             ->latest('sale_date')
             ->latest('id')
-            ->paginate();
+            ->paginate($request->perPage());
 
         return SaleResource::collection($sales);
     }

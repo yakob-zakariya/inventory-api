@@ -3,23 +3,23 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\IndexSupplierRequest;
 use App\Http\Requests\Api\V1\StoreSupplierRequest;
 use App\Http\Requests\Api\V1\UpdateSupplierRequest;
 use App\Http\Resources\SupplierResource;
 use App\Models\Supplier;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 
 class SupplierController extends Controller
 {
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(IndexSupplierRequest $request): AnonymousResourceCollection
     {
         $suppliers = Supplier::query()
             ->search($request->query('search'))
             ->orderBy('name')
-            ->paginate();
+            ->paginate($request->perPage());
 
         return SupplierResource::collection($suppliers);
     }

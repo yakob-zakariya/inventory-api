@@ -24,7 +24,7 @@ class AccountTransactionController extends Controller
             ->filter($request->validated())
             ->latest('transaction_date')
             ->latest('id')
-            ->paginate();
+            ->paginate($request->perPage());
 
         return AccountTransactionResource::collection($transactions);
     }

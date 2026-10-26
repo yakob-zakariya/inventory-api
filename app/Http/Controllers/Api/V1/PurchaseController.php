@@ -23,7 +23,7 @@ class PurchaseController extends Controller
             ->filter($request->validated())
             ->latest('purchase_date')
             ->latest('id')
-            ->paginate();
+            ->paginate($request->perPage());
 
         return PurchaseResource::collection($purchases);
     }

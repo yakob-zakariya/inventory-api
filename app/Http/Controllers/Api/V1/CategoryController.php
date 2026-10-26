@@ -4,23 +4,23 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Exceptions\ConflictException;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\ListRequest;
 use App\Http\Requests\Api\V1\StoreCategoryRequest;
 use App\Http\Requests\Api\V1\UpdateCategoryRequest;
 use App\Http\Resources\CategoryResource;
 use App\Models\Category;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 
 class CategoryController extends Controller
 {
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(ListRequest $request): AnonymousResourceCollection
     {
         $categories = Category::query()
             ->search($request->query('search'))
             ->orderBy('name')
-            ->paginate();
+            ->paginate($request->perPage());
 
         return CategoryResource::collection($categories);
     }

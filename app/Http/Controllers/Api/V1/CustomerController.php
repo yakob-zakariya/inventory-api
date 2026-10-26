@@ -3,23 +3,23 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\IndexCustomerRequest;
 use App\Http\Requests\Api\V1\StoreCustomerRequest;
 use App\Http\Requests\Api\V1\UpdateCustomerRequest;
 use App\Http\Resources\CustomerResource;
 use App\Models\Customer;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 
 class CustomerController extends Controller
 {
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(IndexCustomerRequest $request): AnonymousResourceCollection
     {
         $customers = Customer::query()
             ->search($request->query('search'))
             ->orderBy('name')
-            ->paginate();
+            ->paginate($request->perPage());
 
         return CustomerResource::collection($customers);
     }
