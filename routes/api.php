@@ -68,12 +68,18 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::middleware('permission:'.Permission::PurchasesCreate->value)->group(function () {
             Route::apiResource('purchases', PurchaseController::class)->only(['index', 'store', 'show']);
         });
+        Route::post('purchases/{purchase}/void', [PurchaseController::class, 'void'])
+            ->middleware('permission:'.Permission::PurchasesVoid->value)
+            ->name('purchases.void');
 
         // Sales: anyone logged in can view them (costs are hidden without reports.view).
         Route::apiResource('sales', SaleController::class)->only(['index', 'show']);
         Route::post('sales', [SaleController::class, 'store'])
             ->middleware('permission:'.Permission::SalesCreate->value)
             ->name('sales.store');
+        Route::post('sales/{sale}/void', [SaleController::class, 'void'])
+            ->middleware('permission:'.Permission::SalesVoid->value)
+            ->name('sales.void');
 
         // Later payments against a purchase or sale (purchases also need purchases.create).
         Route::post('payments', PaymentController::class)

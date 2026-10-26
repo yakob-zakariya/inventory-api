@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\IndexPurchaseRequest;
 use App\Http\Requests\Api\V1\StorePurchaseRequest;
+use App\Http\Requests\Api\V1\VoidDocumentRequest;
 use App\Http\Resources\PurchaseResource;
 use App\Models\Purchase;
+use App\Services\DocumentVoider;
 use App\Services\PurchaseRecorder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -35,6 +37,16 @@ class PurchaseController extends Controller
 
     public function show(Purchase $purchase): PurchaseResource
     {
+        return new PurchaseResource($this->loadDetails($purchase));
+    }
+
+    /**
+     * Void the purchase with a reason: its stock movements are reversed and it leaves all totals.
+     */
+    public function void(VoidDocumentRequest $request, Purchase $purchase, DocumentVoider $voider): PurchaseResource
+    {
+        $purchase = $voider->void($purchase, $request->validated('reason'));
+
         return new PurchaseResource($this->loadDetails($purchase));
     }
 
