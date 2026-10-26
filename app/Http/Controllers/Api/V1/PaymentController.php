@@ -18,7 +18,7 @@ class PaymentController extends Controller
     public function __invoke(StorePaymentRequest $request, PaymentRecorder $recorder): JsonResponse
     {
         $document = $recorder->record($request->validated())
-            ->load(['items.product', 'payments.account'])
+            ->load(['items.product', 'payments.account', 'payments.creator:id,name', 'payments.reversal:id,reverses_transaction_id'])
             ->loadSum('payments as payments_sum', 'amount');
 
         $resource = $document instanceof Sale

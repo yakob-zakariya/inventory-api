@@ -63,7 +63,7 @@ class PurchaseController extends Controller
     private function loadDetails(Purchase $purchase): Purchase
     {
         return $purchase
-            ->load(['supplier', 'items.product', 'payments.account'])
+            ->load(['supplier', 'items.product', 'payments.account', 'payments.creator:id,name', 'payments.reversal:id,reverses_transaction_id'])
             ->loadSum('payments as payments_sum', 'amount');
     }
 }

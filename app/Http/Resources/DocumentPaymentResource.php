@@ -38,7 +38,10 @@ class DocumentPaymentResource extends JsonResource
             'transaction_date' => $this->transaction_date->toDateString(),
             'receipt_reference' => $this->receipt_reference,
             'note' => $this->note,
+            'reverses_transaction_id' => $this->reverses_transaction_id,
+            'reversed_by_transaction_id' => $this->whenLoaded('reversal', fn () => $this->reversal?->id),
             'created_by' => $this->created_by,
+            'created_by_user' => $this->creator?->only(['id', 'name']),
             'created_at' => $this->created_at,
         ];
     }
