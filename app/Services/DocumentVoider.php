@@ -32,9 +32,11 @@ class DocumentVoider
      */
     public function void(Purchase|Sale $document, string $reason): Purchase|Sale
     {
-        return DB::transaction(function () use ($document, $reason) {
-            // Items never change, so they can be read before taking the locks.
-            $items = $document->items()->orderBy('id')->get();
+        // Items never change, so they are read before the transaction. Inside it, the first plain read
+        // fixes MySQL's snapshot, and the stock and payment checks must see what committed while waiting for the locks.
+        $items = $document->items()->orderBy('id')->get();
+
+        return DB::transaction(function () use ($document, $items, $reason) {
             $products = $this->products->lock($items->map(fn ($item) => ['product_id' => $item->product_id])->all());
 
             $document = $document::query()->lockForUpdate()->findOrFail($document->getKey());

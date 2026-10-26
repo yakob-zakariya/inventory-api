@@ -20,10 +20,13 @@ return new class extends Migration
 
     /**
      * Reverse the migrations.
+     *
+     * MySQL lets the unique index serve the foreign key, so a plain index must exist before it is dropped.
      */
     public function down(): void
     {
         Schema::table('account_transactions', function (Blueprint $table) {
+            $table->index('reverses_transaction_id');
             $table->dropUnique(['reverses_transaction_id']);
         });
     }

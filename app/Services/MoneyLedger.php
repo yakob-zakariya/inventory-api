@@ -164,7 +164,8 @@ class MoneyLedger
 
         $accounts = $this->lockAccounts($originals->pluck('account_id')->all());
 
-        if (AccountTransaction::query()->whereIn('reverses_transaction_id', $originals->modelKeys())->exists()) {
+        // A locking read sees the latest rows even if the transaction's snapshot is older (the transfer lookup above).
+        if (AccountTransaction::query()->whereIn('reverses_transaction_id', $originals->modelKeys())->sharedLock()->exists()) {
             throw new ConflictException("Transaction {$original->id} is already reversed.");
         }
 
