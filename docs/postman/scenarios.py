@@ -256,6 +256,26 @@ FOLDERS = [
   step("Voided documents are left out of the summary", "GET", "/reports/summary", OWNER,
        checks={"data.payables": "7800.00", "data.receivables": "525.00", "data.net_worth": "108825.00"}),
  ]),
+ ("Phase 7 — Reports", "Reports for the current month (the demo data is dated today). The list reports are filters on the normal lists.", [
+  step("Profit this month", "GET", "/reports/profit", OWNER,
+       checks={"data.sales": "6825.00", "data.cost_of_sales": "5900.00", "data.gross_profit": "925.00",
+               "data.expenses": "1500.00", "data.net_profit": "-575.00"},
+       note="Voided sales are left out. The whole month's rent counts against a few days of sales, hence the loss."),
+  step("Profit by month", "GET", "/reports/profit?group_by=month", OWNER, checks={"data.series.0.net_profit": "-575.00"},
+       note="group_by=day|month adds a series with every period present, for charts."),
+  step("Unknown grouping", "GET", "/reports/profit?group_by=week", OWNER, status=422, checks={"errors.group_by.0": "The selected group by is invalid."}),
+  step("Cash flow, all accounts", "GET", "/reports/cash-flow", OWNER,
+       checks={"data.opening_balance": "25000.00", "data.money_in": "6300.00", "data.money_out": "17050.00",
+               "data.closing_balance": "14250.00", "data.by_type.0.type": "sale_payment", "data.by_type.0.in": "6300.00"},
+       note="Transfers are left out across all accounts. Reversed entries net into the type they cancel. Closing = the summary's account total."),
+  step("Cash flow, cash drawer", "GET", "/reports/cash-flow?account_id=1", OWNER,
+       checks={"data.account.name": "Cash drawer", "data.closing_balance": "6750.00", "data.by_type.2.type": "transfer_out"},
+       note="For one account, transfers are real money in or out."),
+  step("Staff cannot see reports", "GET", "/reports/cash-flow", STAFF, status=403),
+  step("Customers who owe", "GET", "/customers?has_balance=1", OWNER, checks={"data.0.name": "Demo Credit Customer", "data.0.receivable": "525.00"}),
+  step("Suppliers we owe", "GET", "/suppliers?has_balance=1", OWNER, checks={"data.0.payable": "7800.00"}),
+  step("Out of stock products", "GET", "/products?stock=out", STAFF, checks={"data.0.sku": "TAPE-1", "data.0.stock": 0}),
+ ]),
 ]
 
 def split_path(path):
