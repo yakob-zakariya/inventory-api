@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\IndexSaleRequest;
 use App\Http\Requests\Api\V1\StoreSaleRequest;
 use App\Http\Requests\Api\V1\VoidDocumentRequest;
+use App\Http\Resources\DocumentPreviewResource;
 use App\Http\Resources\SaleResource;
 use App\Models\Sale;
+use App\Services\DocumentPreviewer;
 use App\Services\DocumentVoider;
 use App\Services\SaleRecorder;
 use Illuminate\Http\JsonResponse;
@@ -33,6 +35,14 @@ class SaleController extends Controller
         $sale = $recorder->record($request->validated());
 
         return (new SaleResource($this->loadDetails($sale)))->response()->setStatusCode(201);
+    }
+
+    /**
+     * Price and check a new sale without saving it: same body, rules and errors as store.
+     */
+    public function preview(StoreSaleRequest $request, DocumentPreviewer $previewer): DocumentPreviewResource
+    {
+        return new DocumentPreviewResource($previewer->sale($request->validated()));
     }
 
     public function show(Sale $sale): SaleResource

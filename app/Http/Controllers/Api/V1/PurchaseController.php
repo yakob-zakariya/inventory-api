@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\IndexPurchaseRequest;
 use App\Http\Requests\Api\V1\StorePurchaseRequest;
 use App\Http\Requests\Api\V1\VoidDocumentRequest;
+use App\Http\Resources\DocumentPreviewResource;
 use App\Http\Resources\PurchaseResource;
 use App\Models\Purchase;
+use App\Services\DocumentPreviewer;
 use App\Services\DocumentVoider;
 use App\Services\PurchaseRecorder;
 use Illuminate\Http\JsonResponse;
@@ -33,6 +35,14 @@ class PurchaseController extends Controller
         $purchase = $recorder->record($request->validated());
 
         return (new PurchaseResource($this->loadDetails($purchase)))->response()->setStatusCode(201);
+    }
+
+    /**
+     * Price and check a new purchase without saving it: same body, rules and errors as store.
+     */
+    public function preview(StorePurchaseRequest $request, DocumentPreviewer $previewer): DocumentPreviewResource
+    {
+        return new DocumentPreviewResource($previewer->purchase($request->validated()));
     }
 
     public function show(Purchase $purchase): PurchaseResource

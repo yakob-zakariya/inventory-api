@@ -72,6 +72,7 @@ Route::prefix('v1')->name('v1.')->group(function () {
 
         // Purchases: viewing them shows supplier costs, so it needs purchases.create too.
         Route::middleware('permission:'.Permission::PurchasesCreate->value)->group(function () {
+            Route::post('purchases/preview', [PurchaseController::class, 'preview'])->name('purchases.preview');
             Route::apiResource('purchases', PurchaseController::class)->only(['index', 'store', 'show']);
         });
         Route::post('purchases/{purchase}/void', [PurchaseController::class, 'void'])
@@ -80,6 +81,9 @@ Route::prefix('v1')->name('v1.')->group(function () {
 
         // Sales: anyone logged in can view them (costs are hidden without reports.view).
         Route::apiResource('sales', SaleController::class)->only(['index', 'show']);
+        Route::post('sales/preview', [SaleController::class, 'preview'])
+            ->middleware('permission:'.Permission::SalesCreate->value)
+            ->name('sales.preview');
         Route::post('sales', [SaleController::class, 'store'])
             ->middleware('permission:'.Permission::SalesCreate->value)
             ->name('sales.store');
