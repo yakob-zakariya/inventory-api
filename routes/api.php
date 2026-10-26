@@ -110,6 +110,8 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::middleware('permission:'.Permission::ReportsView->value)->group(function () {
             Route::get('account-transactions', [AccountTransactionController::class, 'index'])->name('account-transactions.index');
             Route::get('reports/summary', [ReportController::class, 'summary'])->name('reports.summary');
+            Route::get('reports/profit', [ReportController::class, 'profit'])->name('reports.profit');
+            Route::get('reports/cash-flow', [ReportController::class, 'cashFlow'])->name('reports.cash-flow');
         });
     });
 });
