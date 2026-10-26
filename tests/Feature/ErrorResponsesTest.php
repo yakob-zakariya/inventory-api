@@ -4,6 +4,7 @@ use App\Exceptions\BusinessRuleException;
 use App\Exceptions\ConflictException;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Session\TokenMismatchException;
 use Illuminate\Support\Facades\Route;
 
 beforeEach(function () {
@@ -12,6 +13,7 @@ beforeEach(function () {
         Route::get('conflict', fn () => throw new ConflictException('Category is in use.'));
         Route::get('missing-model', fn () => User::findOrFail(999));
         Route::get('policy-denied', fn () => throw new AuthorizationException);
+        Route::get('csrf-mismatch', fn () => throw new TokenMismatchException);
         Route::get('needs-permission', fn () => 'ok')->middleware(['auth:sanctum', 'permission:users.manage']);
     });
 });
@@ -26,6 +28,12 @@ it('returns 409 with a message for a conflict', function () {
     $this->getJson('/api/v1/_test/conflict')
         ->assertStatus(409)
         ->assertExactJson(['message' => 'Category is in use.']);
+});
+
+it('returns 419 with a message for a CSRF mismatch', function () {
+    $this->getJson('/api/v1/_test/csrf-mismatch')
+        ->assertStatus(419)
+        ->assertExactJson(['message' => 'CSRF token mismatch. Fetch /sanctum/csrf-cookie and try again.']);
 });
 
 it('returns a generic 404 for a missing model', function () {

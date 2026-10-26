@@ -11,6 +11,7 @@ The full design and the reasons behind it are in `docs/design.md`. Read it befor
 - Check data consistency: `php artisan inventory:verify` (once it exists)
 - API docs (local only): `php artisan serve`, then open http://localhost:8000/docs/api. Export for Postman: `php artisan scramble:export`.
 - Manual scenario tests: import `docs/postman/inventory-api.postman_collection.json` into Postman, run `php artisan migrate:fresh --seed`, then Run collection. Each phase adds its walkthrough to `docs/postman/scenarios.py` and re-exports (see the file header); `run` checks the same steps from the command line.
+- Web frontend: a separate repository (React). It logs in with Sanctum cookie sessions (`/sanctum/csrf-cookie`, then `POST /api/v1/auth/session`); mobile and Postman use tokens. Set `FRONTEND_URL` (default http://localhost:5173) for CORS and stateful domains.
 - Concurrency tests (MySQL in Docker): `docker compose up -d mysql-test`, then `php artisan test --compact --group=mysql`. They are skipped when MySQL is not reachable.
 
 ## Architecture rules (never break these)

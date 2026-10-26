@@ -8,6 +8,7 @@ use Spatie\Permission\Exceptions\UnauthorizedException;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 use Spatie\Permission\Middleware\RoleMiddleware;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -25,6 +26,10 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // API-only: there is no login page, so guests get a 401 instead of a redirect.
         $middleware->redirectGuestsTo(fn () => null);
+
+        // Requests from the web app (SANCTUM_STATEFUL_DOMAINS) get a session cookie and CSRF checks.
+        // Token requests (mobile, Postman) are unaffected.
+        $middleware->statefulApi();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $rendersJson = fn (Request $request): bool => $request->is('api/*') || $request->expectsJson();
@@ -34,6 +39,12 @@ return Application::configure(basePath: dirname(__DIR__))
         // Hide model class names and ids that Laravel puts in 404 messages.
         $exceptions->render(fn (NotFoundHttpException $e, Request $request) => $rendersJson($request)
             ? response()->json(['message' => 'Resource not found.'], 404)
+            : null);
+
+        // An expired or missing CSRF token on a cookie-session request.
+        // Laravel turns TokenMismatchException into a 419 HttpException before render callbacks run.
+        $exceptions->render(fn (HttpException $e, Request $request) => $rendersJson($request) && $e->getStatusCode() === 419
+            ? response()->json(['message' => 'CSRF token mismatch. Fetch /sanctum/csrf-cookie and try again.'], 419)
             : null);
 
         // Every 403 (permission middleware, Form Request authorize(), policies) has the same body.

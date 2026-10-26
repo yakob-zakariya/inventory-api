@@ -3,7 +3,6 @@
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Laravel\Sanctum\Http\Middleware\AuthenticateSession;
-use Laravel\Sanctum\Sanctum;
 
 return [
 
@@ -18,11 +17,11 @@ return [
     |
     */
 
-    'stateful' => explode(',', env('SANCTUM_STATEFUL_DOMAINS', sprintf(
-        '%s%s',
-        'localhost,localhost:3000,127.0.0.1,127.0.0.1:8000,::1',
-        Sanctum::currentApplicationUrlWithPort(),
-        // Sanctum::currentRequestHost(),
+    // Only the web app gets cookie sessions. Defaults to FRONTEND_URL's host and port.
+    'stateful' => explode(',', env('SANCTUM_STATEFUL_DOMAINS', (string) preg_replace(
+        '#^https?://#',
+        '',
+        rtrim(env('FRONTEND_URL', 'http://localhost:5173'), '/'),
     ))),
 
     /*
