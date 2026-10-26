@@ -17,7 +17,9 @@ class SupplierController extends Controller
     public function index(IndexSupplierRequest $request): AnonymousResourceCollection
     {
         $suppliers = Supplier::query()
+            ->withOutstanding()
             ->search($request->query('search'))
+            ->when($request->boolean('has_balance'), fn ($query) => $query->hasOutstanding())
             ->orderBy('name')
             ->paginate($request->perPage());
 

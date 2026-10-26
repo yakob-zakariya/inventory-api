@@ -17,7 +17,9 @@ class CustomerController extends Controller
     public function index(IndexCustomerRequest $request): AnonymousResourceCollection
     {
         $customers = Customer::query()
+            ->withOutstanding()
             ->search($request->query('search'))
+            ->when($request->boolean('has_balance'), fn ($query) => $query->hasOutstanding())
             ->orderBy('name')
             ->paginate($request->perPage());
 

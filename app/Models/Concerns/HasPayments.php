@@ -56,6 +56,45 @@ trait HasPayments
         return $totalCents - $paymentsCents * static::paymentSign();
     }
 
+    /**
+     * Subqueries for one party's active documents (the customer or supplier row in the outer query):
+     * their total and the sum of their payment rows, both in cents.
+     *
+     * @return array{outstanding_total_cents: Builder<self>, outstanding_paid_cents: Builder<AccountTransaction>}
+     */
+    public static function outstandingSubqueries(string $partyForeignKey, string $partyKey): array
+    {
+        $documents = static::query()
+            ->where('status', DocumentStatus::Active->value)
+            ->whereColumn($partyForeignKey, $partyKey);
+
+        return [
+            'outstanding_total_cents' => (clone $documents)->selectRaw('coalesce(sum(round(total_amount * 100)), 0)'),
+            'outstanding_paid_cents' => AccountTransaction::query()
+                ->selectRaw('coalesce(sum(round(amount * 100)), 0)')
+                ->where('reference_type', (new static)->getMorphClass())
+                ->whereIn('reference_id', (clone $documents)->select('id')),
+        ];
+    }
+
+    /**
+     * Active documents that still have a balance due.
+     *
+     * @param  Builder<self>  $query
+     */
+    #[Scope]
+    protected function owing(Builder $query): void
+    {
+        $paidCents = AccountTransaction::query()
+            ->selectRaw('coalesce(sum(round(amount * 100)), 0) * ?', [static::paymentSign()])
+            ->where('reference_type', $this->getMorphClass())
+            ->whereColumn('reference_id', $this->getQualifiedKeyName());
+
+        $query
+            ->where('status', DocumentStatus::Active->value)
+            ->where(DB::raw('round(total_amount * 100)'), '>', $paidCents);
+    }
+
     public function paidCents(): int
     {
         $sum = array_key_exists('payments_sum', $this->attributes)
