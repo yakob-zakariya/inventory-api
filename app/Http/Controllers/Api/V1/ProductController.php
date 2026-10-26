@@ -24,7 +24,8 @@ class ProductController extends Controller
             ->withStock()
             ->search($request->query('search'))
             ->when($request->integer('category_id'), fn ($query, int $categoryId) => $query->where('category_id', $categoryId))
-            ->orderBy('name')
+            ->when($request->validated('stock'), fn ($query, string $level) => $query->stockLevel($level))
+            ->sortBy($request->validated('sort'))
             ->paginate($request->perPage());
 
         return ProductResource::collection($products);

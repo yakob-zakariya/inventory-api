@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api\V1;
 
 use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Validation\Rule;
 
 class IndexProductRequest extends ListRequest
 {
@@ -16,6 +17,8 @@ class IndexProductRequest extends ListRequest
         return [
             ...parent::rules(),
             'category_id' => ['sometimes', 'integer'],
+            'stock' => ['sometimes', Rule::in(['low', 'out'])],
+            'sort' => ['sometimes', Rule::in(['name', 'stock', '-stock'])],
         ];
     }
 }

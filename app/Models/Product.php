@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 
 #[Fillable(['category_id', 'sku', 'name', 'description', 'unit', 'cost_price', 'selling_price', 'reorder_level'])]
 class Product extends Model
@@ -70,6 +71,51 @@ class Product extends Model
     protected function withStock(Builder $query): void
     {
         $query->withSum('stockMovements as stock', 'quantity');
+    }
+
+    /**
+     * Only products whose stock is `low` (above zero, at or below the reorder level) or `out` (zero or less).
+     *
+     * @param  Builder<self>  $query
+     */
+    #[Scope]
+    protected function stockLevel(Builder $query, string $level): void
+    {
+        $stock = static::stockSubquery();
+
+        match ($level) {
+            'low' => $query->where($stock, '>', 0)->where($stock, '<=', DB::raw($this->qualifyColumn('reorder_level'))),
+            'out' => $query->where($stock, '<=', 0),
+        };
+    }
+
+    /**
+     * Sort by `name` (default), `stock` (lowest first) or `-stock` (highest first), then by name.
+     *
+     * @param  Builder<self>  $query
+     */
+    #[Scope]
+    protected function sortBy(Builder $query, ?string $sort): void
+    {
+        match ($sort) {
+            'stock' => $query->orderBy(static::stockSubquery()),
+            '-stock' => $query->orderByDesc(static::stockSubquery()),
+            default => null,
+        };
+
+        $query->orderBy($this->qualifyColumn('name'));
+    }
+
+    /**
+     * Stock on hand of the product row in the outer query.
+     *
+     * @return Builder<StockMovement>
+     */
+    private static function stockSubquery(): Builder
+    {
+        return StockMovement::query()
+            ->selectRaw('coalesce(sum(quantity), 0)')
+            ->whereColumn('product_id', 'products.id');
     }
 
     /**
