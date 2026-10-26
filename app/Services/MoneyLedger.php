@@ -4,11 +4,13 @@ namespace App\Services;
 
 use App\Enums\AccountTransactionType;
 use App\Exceptions\BusinessRuleException;
+use App\Exceptions\ConflictException;
 use App\Models\Account;
 use App\Models\AccountTransaction;
 use App\Support\Money;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -54,6 +56,7 @@ class MoneyLedger
         ?Model $reference = null,
         ?string $receiptReference = null,
         ?string $transferGroup = null,
+        ?AccountTransaction $reverses = null,
     ): AccountTransaction {
         $this->ensureInTransaction();
 
@@ -85,6 +88,7 @@ class MoneyLedger
             'reference_type' => $reference?->getMorphClass(),
             'reference_id' => $reference?->getKey(),
             'transfer_group' => $transferGroup,
+            'reverses_transaction_id' => $reverses?->id,
         ]);
     }
 
@@ -129,6 +133,53 @@ class MoneyLedger
         }
 
         return $this->record($account, AccountTransactionType::Adjustment, $difference, $date, $note);
+    }
+
+    /**
+     * Cancel a wrong entry with a reversal row of the opposite amount that points at it.
+     * A transfer is reversed as a pair: both sides, under a new transfer group.
+     * The reversal keeps the original's document, so the document's paid amount follows.
+     *
+     * @return list<AccountTransaction> the reversal rows
+     *
+     * @throws BusinessRuleException when the entry is itself a reversal or an account is inactive
+     * @throws ConflictException when the entry was already reversed
+     */
+    public function reverse(AccountTransaction $original, string $reason, Carbon|string $date): array
+    {
+        $this->ensureInTransaction();
+
+        if ($original->type === AccountTransactionType::Reversal) {
+            throw new BusinessRuleException('A reversal cannot be reversed. Record the correct entry again instead.');
+        }
+
+        $originals = $original->transfer_group === null
+            ? new Collection([$original])
+            : AccountTransaction::query()->where('transfer_group', $original->transfer_group)->orderBy('id')->get();
+
+        // Lock order: the document first (a void checks its payments under this lock), then the accounts.
+        $document = $original->reference_type === null
+            ? null
+            : Relation::getMorphedModel($original->reference_type)::query()->lockForUpdate()->find($original->reference_id);
+
+        $accounts = $this->lockAccounts($originals->pluck('account_id')->all());
+
+        if (AccountTransaction::query()->whereIn('reverses_transaction_id', $originals->modelKeys())->exists()) {
+            throw new ConflictException("Transaction {$original->id} is already reversed.");
+        }
+
+        $group = $original->transfer_group === null ? null : (string) Str::uuid();
+
+        return $originals->map(fn (AccountTransaction $row) => $this->record(
+            $accounts[$row->account_id],
+            AccountTransactionType::Reversal,
+            -Money::toCents($row->amount),
+            $date,
+            $reason,
+            $document,
+            transferGroup: $group,
+            reverses: $row,
+        ))->all();
     }
 
     private function ensureInTransaction(): void

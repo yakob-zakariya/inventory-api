@@ -96,6 +96,10 @@ Route::prefix('v1')->name('v1.')->group(function () {
             Route::post('account-adjustments', AccountAdjustmentController::class)->name('account-adjustments.store');
         });
 
+        // Reversing a payment needs payments.void, any other entry accounts.manage (checked in the request).
+        Route::post('account-transactions/{accountTransaction}/reverse', [AccountTransactionController::class, 'reverse'])
+            ->name('account-transactions.reverse');
+
         // Money ledger and reports.
         Route::middleware('permission:'.Permission::ReportsView->value)->group(function () {
             Route::get('account-transactions', [AccountTransactionController::class, 'index'])->name('account-transactions.index');

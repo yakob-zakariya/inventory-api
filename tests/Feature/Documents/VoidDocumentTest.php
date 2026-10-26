@@ -100,7 +100,7 @@ it('refuses to void a document with payments until they are reversed', function 
     $this->postJson("/api/v1/account-transactions/{$payment->id}/reverse", ['reason' => 'Mistake'])->assertCreated();
 
     $this->postJson("/api/v1/sales/{$sale->id}/void", ['reason' => 'Mistake'])->assertOk();
-})->todo('needs the reverse endpoint (next step)');
+});
 
 it('refuses to void a document twice', function () {
     actingAsOwner();
