@@ -16,7 +16,7 @@ class StockMovementController extends Controller
     public function index(IndexStockMovementRequest $request): AnonymousResourceCollection
     {
         $movements = StockMovement::query()
-            ->with('product')
+            ->with(['product', 'reference'])
             ->when($request->validated('product_id'), fn ($query, $productId) => $query->where('product_id', $productId))
             ->when($request->validated('type'), fn ($query, $type) => $query->where('type', $type))
             ->latest('id')

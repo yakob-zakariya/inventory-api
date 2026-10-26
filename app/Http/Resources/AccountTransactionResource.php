@@ -34,6 +34,7 @@ class AccountTransactionResource extends JsonResource
             'receipt_reference' => $this->receipt_reference,
             'reference_type' => $this->reference_type,
             'reference_id' => $this->reference_id,
+            'reference_number' => $this->reference?->number,
             'transfer_group' => $this->transfer_group,
             'reverses_transaction_id' => $this->reverses_transaction_id,
             'reversed_by_transaction_id' => $this->whenLoaded('reversal', fn () => $this->reversal?->id),

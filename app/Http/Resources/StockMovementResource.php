@@ -31,6 +31,7 @@ class StockMovementResource extends JsonResource
             'note' => $this->note,
             'reference_type' => $this->reference_type,
             'reference_id' => $this->reference_id,
+            'reference_number' => $this->reference?->number,
             'created_by' => $this->created_by,
             'created_at' => $this->created_at,
         ];
