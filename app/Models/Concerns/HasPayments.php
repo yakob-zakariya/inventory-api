@@ -111,12 +111,6 @@ trait HasPayments
 
     public function paymentStatus(): PaymentStatus
     {
-        $paid = $this->paidCents();
-
-        return match (true) {
-            $paid <= 0 => PaymentStatus::Unpaid,
-            $paid < Money::toCents($this->total_amount) => PaymentStatus::Partial,
-            default => PaymentStatus::Paid,
-        };
+        return PaymentStatus::forCents($this->paidCents(), Money::toCents($this->total_amount));
     }
 }

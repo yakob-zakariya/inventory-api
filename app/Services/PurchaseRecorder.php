@@ -34,29 +34,20 @@ class PurchaseRecorder
     public function record(array $data): Purchase
     {
         return DB::transaction(function () use ($data) {
-            $products = $this->products->lock($data['items']);
+            $draft = PurchaseDraft::make($data, $this->products->lock($data['items']));
             $number = $this->numberer->next(DocumentType::Purchase);
-
-            $lines = array_map(fn (array $item) => [
-                'product' => $products[$item['product_id']],
-                'quantity' => (int) $item['quantity'],
-                'unit_cost_cents' => Money::toCents($item['unit_cost']),
-            ], $data['items']);
-
-            $totalCents = array_sum(array_map(fn (array $line) => $line['quantity'] * $line['unit_cost_cents'], $lines));
-            $payments = DocumentPayments::fromInput($data['payments'] ?? [], $totalCents);
 
             $purchase = Purchase::create([
                 'number' => $number,
                 'supplier_id' => $data['supplier_id'],
                 'invoice_number' => $data['invoice_number'] ?? null,
                 'purchase_date' => $data['purchase_date'] ?? now()->toDateString(),
-                'total_amount' => Money::fromCents($totalCents),
+                'total_amount' => Money::fromCents($draft->totalCents),
                 'note' => $data['note'] ?? null,
                 'status' => DocumentStatus::Active,
             ]);
 
-            foreach ($lines as $line) {
+            foreach ($draft->lines as $line) {
                 $purchase->items()->create([
                     'product_id' => $line['product']->id,
                     'quantity' => $line['quantity'],
@@ -70,7 +61,7 @@ class PurchaseRecorder
                 $line['product']->update(['cost_price' => Money::fromCents($line['unit_cost_cents'])]);
             }
 
-            foreach ($payments->lines as $payment) {
+            foreach ($draft->payments->lines as $payment) {
                 $this->money->record(
                     Account::findOrFail($payment['account_id']),
                     AccountTransactionType::PurchasePayment,
