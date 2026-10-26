@@ -165,6 +165,10 @@ If reports ever become slow, cached columns may be added, but only alongside the
 Prefix `/api/v1`. All routes except login need a Sanctum token. Permissions are checked by name.
 
 - Auth: `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`.
+- Two ways to log in, accepted side by side by `auth:sanctum`:
+  - **Tokens** (mobile app, Postman, scripts): `POST /auth/login` returns a bearer token; `POST /auth/logout` revokes it.
+  - **Cookie session** (the web app): `GET /sanctum/csrf-cookie`, then `POST /auth/session` with email and password; later requests send the session cookie and the `X-XSRF-TOKEN` header. `DELETE /auth/session` logs out. The cookie cannot be read by scripts, so an XSS bug cannot steal the login. A CSRF failure returns 419.
+  - Cookie sessions only work for origins listed in `SANCTUM_STATEFUL_DOMAINS` (derived from `FRONTEND_URL` when unset). CORS allows only `FRONTEND_URL`, with credentials. In production the web app and the API share a parent domain (for example `app.shop.com` and `api.shop.com`, with `SESSION_DOMAIN=.shop.com` and `SESSION_SECURE_COOKIE=true`).
 - Users: list and create (`users.manage`). There is no public registration.
 - Master data CRUD: categories, suppliers, customers, products, accounts.
 - Stock: `GET /stock-movements` (filters: product, type), `POST /stock-adjustments`.
