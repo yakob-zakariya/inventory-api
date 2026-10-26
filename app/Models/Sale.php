@@ -23,6 +23,11 @@ class Sale extends Model
     use HasPayments, RecordsCreator;
 
     /**
+     * Rows per page in API lists.
+     */
+    protected $perPage = 10;
+
+    /**
      * Sale payments are money into an account.
      */
     public static function paymentSign(): int

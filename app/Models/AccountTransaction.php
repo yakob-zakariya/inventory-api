@@ -29,6 +29,11 @@ class AccountTransaction extends Model
     /** @use HasFactory<AccountTransactionFactory> */
     use HasFactory, RecordsCreator;
 
+    /**
+     * Rows per page in API lists.
+     */
+    protected $perPage = 10;
+
     protected static function booted(): void
     {
         static::updating(fn () => throw new LogicException('Account transactions are append-only and cannot be updated.'));

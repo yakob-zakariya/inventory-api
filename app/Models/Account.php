@@ -24,6 +24,11 @@ class Account extends Model
     use HasFactory, RecordsCreator;
 
     /**
+     * Rows per page in API lists.
+     */
+    protected $perPage = 10;
+
+    /**
      * @var array<string, mixed>
      */
     protected $attributes = [

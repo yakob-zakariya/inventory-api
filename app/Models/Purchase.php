@@ -23,6 +23,11 @@ class Purchase extends Model
     use HasPayments, RecordsCreator;
 
     /**
+     * Rows per page in API lists.
+     */
+    protected $perPage = 10;
+
+    /**
      * Purchase payments are money out of an account.
      */
     public static function paymentSign(): int

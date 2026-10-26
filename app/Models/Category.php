@@ -18,6 +18,11 @@ class Category extends Model
     use HasFactory, RecordsCreator;
 
     /**
+     * Rows per page in API lists.
+     */
+    protected $perPage = 10;
+
+    /**
      * @return HasMany<Product, $this>
      */
     public function products(): HasMany

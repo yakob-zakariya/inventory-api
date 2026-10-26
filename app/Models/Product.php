@@ -20,6 +20,11 @@ class Product extends Model
     use HasFactory, RecordsCreator, SoftDeletes;
 
     /**
+     * Rows per page in API lists.
+     */
+    protected $perPage = 10;
+
+    /**
      * @var array<string, mixed>
      */
     protected $attributes = [

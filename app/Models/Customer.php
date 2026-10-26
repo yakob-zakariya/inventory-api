@@ -18,6 +18,11 @@ class Customer extends Model
     use HasFactory, RecordsCreator, SoftDeletes;
 
     /**
+     * Rows per page in API lists.
+     */
+    protected $perPage = 10;
+
+    /**
      * Filter by a partial match on name or phone.
      *
      * @param  Builder<self>  $query
