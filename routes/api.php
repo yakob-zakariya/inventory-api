@@ -26,8 +26,14 @@ Route::prefix('v1')->name('v1.')->group(function () {
         ->middleware('throttle:login')
         ->name('auth.login');
 
+    // The web app logs in with a session cookie instead of a token.
+    Route::post('auth/session', [AuthController::class, 'startSession'])
+        ->middleware('throttle:login')
+        ->name('auth.session.store');
+
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
+        Route::delete('auth/session', [AuthController::class, 'endSession'])->name('auth.session.destroy');
         Route::get('auth/me', [AuthController::class, 'me'])->name('auth.me');
 
         Route::middleware('permission:'.Permission::UsersManage->value)->group(function () {
