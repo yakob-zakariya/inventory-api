@@ -35,6 +35,7 @@ class SaleRecorder
     {
         return DB::transaction(function () use ($data) {
             $draft = SaleDraft::make($data, $this->products->lock($data['items']));
+            $draft->assertSavable();
 
             $sale = Sale::create([
                 'number' => $this->numberer->next(DocumentType::Sale),

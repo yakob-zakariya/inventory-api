@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Services\DocumentProblem;
 use App\Services\PurchaseDraft;
 use App\Services\SaleDraft;
 use App\Support\Money;
@@ -10,8 +11,9 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
  * A priced, unsaved sale or purchase. Sale lines show unit_price, purchase lines unit_cost.
+ * `problems` lists what would stop saving; empty means the document can be saved.
  *
- * @property SaleDraft|PurchaseDraft $resource
+ * @property array{draft: SaleDraft|PurchaseDraft, problems: list<DocumentProblem>} $resource
  */
 class DocumentPreviewResource extends JsonResource
 {
@@ -22,7 +24,7 @@ class DocumentPreviewResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $draft = $this->resource;
+        $draft = $this->resource['draft'];
         $priceKey = $draft instanceof SaleDraft ? 'unit_price' : 'unit_cost';
 
         return [
@@ -37,6 +39,11 @@ class DocumentPreviewResource extends JsonResource
             'paid_amount' => Money::fromCents($draft->payments->totalCents),
             'balance_due' => Money::fromCents($draft->totalCents - $draft->payments->totalCents),
             'payment_status' => $draft->paymentStatus(),
+            'problems' => array_map(fn (DocumentProblem $problem) => [
+                'rule' => $problem->rule,
+                'message' => $problem->message,
+                'field' => $problem->field,
+            ], $this->resource['problems']),
         ];
     }
 }

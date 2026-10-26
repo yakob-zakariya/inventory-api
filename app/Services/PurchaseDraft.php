@@ -15,19 +15,19 @@ final readonly class PurchaseDraft
 {
     /**
      * @param  list<array{product: Product, quantity: int, unit_cost_cents: int}>  $lines
+     * @param  list<DocumentProblem>  $problems  what would stop saving
      */
     private function __construct(
         public array $lines,
         public int $totalCents,
         public DocumentPayments $payments,
+        public array $problems,
     ) {}
 
     /**
      * @param  array{items: list<array{product_id: int, quantity: int, unit_cost: string|int|float}>,
      *     payments?: list<array{account_id: int, amount: string|int|float, receipt_reference?: ?string}>}  $data
      * @param  Collection<int, Product>  $products  keyed by id
-     *
-     * @throws BusinessRuleException when the payments exceed the total
      */
     public static function make(array $data, Collection $products): self
     {
@@ -39,7 +39,19 @@ final readonly class PurchaseDraft
 
         $totalCents = array_sum(array_map(fn (array $line) => $line['quantity'] * $line['unit_cost_cents'], $lines));
 
-        return new self($lines, $totalCents, DocumentPayments::fromInput($data['payments'] ?? [], $totalCents));
+        $payments = DocumentPayments::fromInput($data['payments'] ?? []);
+
+        return new self($lines, $totalCents, $payments, array_values(array_filter([$payments->overpaymentOf($totalCents)])));
+    }
+
+    /**
+     * @throws BusinessRuleException with the first problem, as saving reports it
+     */
+    public function assertSavable(): void
+    {
+        if ($this->problems !== []) {
+            throw $this->problems[0]->toException();
+        }
     }
 
     public function paymentStatus(): PaymentStatus

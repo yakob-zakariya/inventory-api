@@ -35,6 +35,7 @@ class PurchaseRecorder
     {
         return DB::transaction(function () use ($data) {
             $draft = PurchaseDraft::make($data, $this->products->lock($data['items']));
+            $draft->assertSavable();
             $number = $this->numberer->next(DocumentType::Purchase);
 
             $purchase = Purchase::create([

@@ -174,7 +174,7 @@ Prefix `/api/v1`. All routes except login need a Sanctum token. Permissions are 
 - Stock: `GET /stock-movements` (filters: product, type), `POST /stock-adjustments`.
 - Purchases: `GET /purchases`, `GET /purchases/{id}`, `POST /purchases`, `POST /purchases/preview`, `PATCH /purchases/{id}`, `POST /purchases/{id}/void`.
 - Sales: `GET /sales`, `GET /sales/{id}`, `POST /sales`, `POST /sales/preview`, `PATCH /sales/{id}`, `POST /sales/{id}/void`.
-- Preview: same body, validation, permissions and business-rule errors as creating the document; nothing is saved. Its stock check takes no lock, so saving checks again.
+- Preview: same body, validation and permissions as creating the document; nothing is saved. Field errors are a 422 as when saving. Business rules do not stop a preview: it returns 200 with the totals and `problems` (`rule`, `message` (the text saving would return), `field`), listing all of them (`overpaid`, `walk_in_not_paid`, `insufficient_stock` pointing at `items.N.quantity`); empty means it can be saved. Its stock check takes no lock, so saving checks again.
 - Edit: only the note (sales) or the note and invoice number (purchases), also on voided documents; any other field is a 422.
 - Document lists: `search` (number, customer or supplier name, purchase invoice number) and `payment_status=unpaid|partial|paid` (active documents only), besides party, status and dates.
 - Viewing: purchases need `purchases.create`. Sales are visible to any logged-in user, but sale items show `unit_cost` only to users with `reports.view`.

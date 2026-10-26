@@ -39,7 +39,7 @@ class SaleController extends Controller
     }
 
     /**
-     * Price and check a new sale without saving it: same body, rules and errors as store.
+     * Price a new sale without saving it. Field errors are a 422 as in store; business rules come back as `problems`.
      */
     public function preview(StoreSaleRequest $request, DocumentPreviewer $previewer): DocumentPreviewResource
     {
