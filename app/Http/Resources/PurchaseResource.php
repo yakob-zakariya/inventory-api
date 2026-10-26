@@ -35,6 +35,7 @@ class PurchaseResource extends JsonResource
             'status' => $this->status,
             'note' => $this->note,
             'voided_at' => $this->voided_at,
+            'voided_by' => $this->voided_by,
             'void_reason' => $this->void_reason,
             'items' => PurchaseItemResource::collection($this->whenLoaded('items')),
             'payments' => $this->whenLoaded('payments', fn () => $this->payments->map(

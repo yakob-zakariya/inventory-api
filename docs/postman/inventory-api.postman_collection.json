@@ -44,6 +44,34 @@
     {
       "key": "creditSaleId",
       "value": ""
+    },
+    {
+      "key": "wrongSaleId",
+      "value": ""
+    },
+    {
+      "key": "wrongPaymentId",
+      "value": ""
+    },
+    {
+      "key": "paymentReversalId",
+      "value": ""
+    },
+    {
+      "key": "tapeId",
+      "value": ""
+    },
+    {
+      "key": "tapePurchaseId",
+      "value": ""
+    },
+    {
+      "key": "tapeSaleId",
+      "value": ""
+    },
+    {
+      "key": "transferInId",
+      "value": ""
     }
   ],
   "item": [
@@ -4006,6 +4034,1424 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"status 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Phase 6 — Voiding and reversals",
+      "description": "Mistakes are cancelled, never edited: a void reverses a document's stock, a reversal cancels a ledger entry.",
+      "item": [
+        {
+          "name": "A credit sale that turns out wrong",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sales",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sales"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_id\": 1,\n  \"items\": [\n    {\n      \"product_id\": 3,\n      \"quantity\": 2\n    }\n  ],\n  \"payments\": [\n    {\n      \"account_id\": 1,\n      \"amount\": \"500.00\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.number = \\\"SAL-000005\\\"\", () => pm.expect(j[\"data\"][\"number\"]).to.eql(\"SAL-000005\"));",
+                  "pm.test(\"data.paid_amount = \\\"500.00\\\"\", () => pm.expect(j[\"data\"][\"paid_amount\"]).to.eql(\"500.00\"));",
+                  "pm.collectionVariables.set(\"wrongSaleId\", j[\"data\"][\"id\"]);",
+                  "pm.collectionVariables.set(\"wrongPaymentId\", j[\"data\"][\"payments\"][0][\"id\"]);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Paint stock went down",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products/3",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products",
+                "3"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.stock = 57\", () => pm.expect(j[\"data\"][\"stock\"]).to.eql(57));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A sale with payments cannot be voided",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sales/{{wrongSaleId}}/void",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sales",
+                "{{wrongSaleId}}",
+                "void"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Wrong customer\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 422\", () => pm.response.to.have.status(422));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"message = \\\"SAL-000005 has payments of 500.00. Reverse them before voiding it.\\\"\", () => pm.expect(j[\"message\"]).to.eql(\"SAL-000005 has payments of 500.00. Reverse them before voiding it.\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Staff cannot reverse a payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/account-transactions/{{wrongPaymentId}}/reverse",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "account-transactions",
+                "{{wrongPaymentId}}",
+                "reverse"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Wrong customer\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reverse the payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/account-transactions/{{wrongPaymentId}}/reverse",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "account-transactions",
+                "{{wrongPaymentId}}",
+                "reverse"
+              ]
+            },
+            "description": "The reversal keeps the sale as its reference, so the sale's paid amount drops back.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Wrong customer\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.0.type = \\\"reversal\\\"\", () => pm.expect(j[\"data\"][0][\"type\"]).to.eql(\"reversal\"));",
+                  "pm.test(\"data.0.amount = \\\"-500.00\\\"\", () => pm.expect(j[\"data\"][0][\"amount\"]).to.eql(\"-500.00\"));",
+                  "pm.test(\"data.0.note = \\\"Wrong customer\\\"\", () => pm.expect(j[\"data\"][0][\"note\"]).to.eql(\"Wrong customer\"));",
+                  "pm.test(\"data.0.reference_type = \\\"sale\\\"\", () => pm.expect(j[\"data\"][0][\"reference_type\"]).to.eql(\"sale\"));",
+                  "pm.collectionVariables.set(\"paymentReversalId\", j[\"data\"][0][\"id\"]);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "The sale is unpaid again",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sales/{{wrongSaleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sales",
+                "{{wrongSaleId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.paid_amount = \\\"0.00\\\"\", () => pm.expect(j[\"data\"][\"paid_amount\"]).to.eql(\"0.00\"));",
+                  "pm.test(\"data.payment_status = \\\"unpaid\\\"\", () => pm.expect(j[\"data\"][\"payment_status\"]).to.eql(\"unpaid\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A payment is reversed only once",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/account-transactions/{{wrongPaymentId}}/reverse",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "account-transactions",
+                "{{wrongPaymentId}}",
+                "reverse"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Again\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 409\", () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A reversal cannot be reversed",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/account-transactions/{{paymentReversalId}}/reverse",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "account-transactions",
+                "{{paymentReversalId}}",
+                "reverse"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Undo\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 422\", () => pm.response.to.have.status(422));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"message = \\\"A reversal cannot be reversed. Record the correct entry again instead.\\\"\", () => pm.expect(j[\"message\"]).to.eql(\"A reversal cannot be reversed. Record the correct entry again instead.\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Staff cannot void a sale",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sales/{{wrongSaleId}}/void",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sales",
+                "{{wrongSaleId}}",
+                "void"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Wrong customer\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A void needs a reason",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sales/{{wrongSaleId}}/void",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sales",
+                "{{wrongSaleId}}",
+                "void"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 422\", () => pm.response.to.have.status(422));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"errors.reason.0 = \\\"A reason is required to void a document.\\\"\", () => pm.expect(j[\"errors\"][\"reason\"][0]).to.eql(\"A reason is required to void a document.\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Void the sale",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sales/{{wrongSaleId}}/void",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sales",
+                "{{wrongSaleId}}",
+                "void"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Wrong customer\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.status = \\\"voided\\\"\", () => pm.expect(j[\"data\"][\"status\"]).to.eql(\"voided\"));",
+                  "pm.test(\"data.void_reason = \\\"Wrong customer\\\"\", () => pm.expect(j[\"data\"][\"void_reason\"]).to.eql(\"Wrong customer\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Its stock is back",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products/3",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products",
+                "3"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.stock = 59\", () => pm.expect(j[\"data\"][\"stock\"]).to.eql(59));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A document is voided only once",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sales/{{wrongSaleId}}/void",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sales",
+                "{{wrongSaleId}}",
+                "void"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Again\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 409\", () => pm.response.to.have.status(409));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"message = \\\"SAL-000005 is already voided.\\\"\", () => pm.expect(j[\"message\"]).to.eql(\"SAL-000005 is already voided.\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A new product at cost 80",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category_id\": 1,\n  \"sku\": \"TAPE-1\",\n  \"name\": \"Measuring tape\",\n  \"unit\": \"piece\",\n  \"cost_price\": \"80.00\",\n  \"selling_price\": \"150.00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.collectionVariables.set(\"tapeId\", j[\"data\"][\"id\"]);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Buy 5 tapes, cost typed wrong as 1000",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/purchases",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "purchases"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"supplier_id\": 1,\n  \"items\": [\n    {\n      \"product_id\": {{tapeId}},\n      \"quantity\": 5,\n      \"unit_cost\": \"1000.00\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.number = \\\"PUR-000003\\\"\", () => pm.expect(j[\"data\"][\"number\"]).to.eql(\"PUR-000003\"));",
+                  "pm.test(\"data.total_amount = \\\"5000.00\\\"\", () => pm.expect(j[\"data\"][\"total_amount\"]).to.eql(\"5000.00\"));",
+                  "pm.collectionVariables.set(\"tapePurchaseId\", j[\"data\"][\"id\"]);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sell 4 tapes",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sales",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sales"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_id\": 1,\n  \"items\": [\n    {\n      \"product_id\": {{tapeId}},\n      \"quantity\": 4\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.number = \\\"SAL-000006\\\"\", () => pm.expect(j[\"data\"][\"number\"]).to.eql(\"SAL-000006\"));",
+                  "pm.collectionVariables.set(\"tapeSaleId\", j[\"data\"][\"id\"]);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "The purchase cannot be voided: its goods are sold",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/purchases/{{tapePurchaseId}}/void",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "purchases",
+                "{{tapePurchaseId}}",
+                "void"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Wrong unit cost\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 422\", () => pm.response.to.have.status(422));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"message = \\\"Not enough stock for TAPE-1: 1 on hand, 5 requested.\\\"\", () => pm.expect(j[\"message\"]).to.eql(\"Not enough stock for TAPE-1: 1 on hand, 5 requested.\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Void the tape sale first",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sales/{{tapeSaleId}}/void",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sales",
+                "{{tapeSaleId}}",
+                "void"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Sold before the cost was fixed\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.status = \\\"voided\\\"\", () => pm.expect(j[\"data\"][\"status\"]).to.eql(\"voided\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Now void the purchase",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/purchases/{{tapePurchaseId}}/void",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "purchases",
+                "{{tapePurchaseId}}",
+                "void"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Wrong unit cost\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.status = \\\"voided\\\"\", () => pm.expect(j[\"data\"][\"status\"]).to.eql(\"voided\"));",
+                  "pm.test(\"data.void_reason = \\\"Wrong unit cost\\\"\", () => pm.expect(j[\"data\"][\"void_reason\"]).to.eql(\"Wrong unit cost\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "The tape's cost is back to 80 and its stock to 0",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products/{{tapeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products",
+                "{{tapeId}}"
+              ]
+            },
+            "description": "The purchase had set the cost to 1000; voiding it restores the cost from before.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.cost_price = \\\"80.00\\\"\", () => pm.expect(j[\"data\"][\"cost_price\"]).to.eql(\"80.00\"));",
+                  "pm.test(\"data.stock = 0\", () => pm.expect(j[\"data\"][\"stock\"]).to.eql(0));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Transfer 200 cash to bank",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/transfers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transfers"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"from_account_id\": 1,\n  \"to_account_id\": 2,\n  \"amount\": \"200.00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.collectionVariables.set(\"transferInId\", j[\"data\"][1][\"id\"]);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reverse the transfer from its bank side",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/account-transactions/{{transferInId}}/reverse",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "account-transactions",
+                "{{transferInId}}",
+                "reverse"
+              ]
+            },
+            "description": "Either side reverses both: two reversal rows sharing a new transfer group.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Deposit never happened\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.0.amount = \\\"200.00\\\"\", () => pm.expect(j[\"data\"][0][\"amount\"]).to.eql(\"200.00\"));",
+                  "pm.test(\"data.0.account_id = 1\", () => pm.expect(j[\"data\"][0][\"account_id\"]).to.eql(1));",
+                  "pm.test(\"data.1.amount = \\\"-200.00\\\"\", () => pm.expect(j[\"data\"][1][\"amount\"]).to.eql(\"-200.00\"));",
+                  "pm.test(\"data.1.account_id = 2\", () => pm.expect(j[\"data\"][1][\"account_id\"]).to.eql(2));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cash balance is unchanged by the whole folder",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "1"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.balance = \\\"6750.00\\\"\", () => pm.expect(j[\"data\"][\"balance\"]).to.eql(\"6750.00\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cash ledger shows the transfer reversal",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/account-transactions?account_id=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "account-transactions"
+              ],
+              "query": [
+                {
+                  "key": "account_id",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "data.1.reversed_by_transaction_id points at data.0.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.0.type = \\\"reversal\\\"\", () => pm.expect(j[\"data\"][0][\"type\"]).to.eql(\"reversal\"));",
+                  "pm.test(\"data.0.amount = \\\"200.00\\\"\", () => pm.expect(j[\"data\"][0][\"amount\"]).to.eql(\"200.00\"));",
+                  "pm.test(\"data.1.type = \\\"transfer_out\\\"\", () => pm.expect(j[\"data\"][1][\"type\"]).to.eql(\"transfer_out\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Voided documents are left out of the summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/summary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "summary"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.payables = \\\"7800.00\\\"\", () => pm.expect(j[\"data\"][\"payables\"]).to.eql(\"7800.00\"));",
+                  "pm.test(\"data.receivables = \\\"525.00\\\"\", () => pm.expect(j[\"data\"][\"receivables\"]).to.eql(\"525.00\"));",
+                  "pm.test(\"data.net_worth = \\\"108825.00\\\"\", () => pm.expect(j[\"data\"][\"net_worth\"]).to.eql(\"108825.00\"));"
                 ]
               }
             }

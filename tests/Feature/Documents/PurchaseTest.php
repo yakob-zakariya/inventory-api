@@ -48,7 +48,8 @@ it('records a purchase with items, stock and a computed total', function () {
         ->and(Product::findOrFail($payload['items'][1]['product_id'])->currentStock())->toBe(3)
         ->and($purchase->stockMovements()->count())->toBe(2)
         ->and(StockMovement::first()->reference_type)->toBe('purchase')
-        ->and($first->cost_price)->toBe('650.00');
+        ->and($first->cost_price)->toBe('650.00')
+        ->and($purchase->items()->where('product_id', $first->id)->value('previous_cost_price'))->toBe('600.00');
 });
 
 it('numbers purchases sequentially', function () {

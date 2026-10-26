@@ -72,14 +72,14 @@ Every master data table also has `created_by` (nullable, the user who created th
 
 ### Documents
 - `purchases`: number (unique, for example PUR-000123), supplier_id, invoice_number, purchase_date, total_amount, note, status (active, voided), voided_at, voided_by, void_reason, created_by.
-- `purchase_items`: purchase_id, product_id, quantity, unit_cost.
+- `purchase_items`: purchase_id, product_id, quantity, unit_cost, previous_cost_price (the product's cost just before this purchase changed it, used to restore it when the purchase is voided).
 - `sales`: number (SAL-000123), customer_id (nullable), sale_date, total_amount, note, status, voided_at, voided_by, void_reason, created_by.
 - `sale_items`: sale_id, product_id, quantity, unit_price, unit_cost (snapshot of the product's cost at the time of sale).
 - `document_sequences`: type (unique), last_number. One row per document type (purchase, sale). To number a new document, lock its row inside the same transaction, add 1 to `last_number`, and format the result (for example SAL-000204). A rollback also rolls back the counter, so numbers have no gaps.
 
 ### Ledgers (append-only)
 - `stock_movements`: product_id, type (purchase, sale, adjustment, reversal), quantity (signed: positive in, negative out), reference (polymorphic, nullable: purchase or sale), note, created_by.
-- `account_transactions`: account_id, type (sale_payment, purchase_payment, expense, transfer_in, transfer_out, owner_deposit, owner_withdrawal, adjustment, reversal), amount (signed: positive money in, negative money out), transaction_date, note, receipt_reference, reference (polymorphic, nullable: purchase or sale), transfer_group (uuid, nullable), reverses_transaction_id (nullable), created_by.
+- `account_transactions`: account_id, type (sale_payment, purchase_payment, expense, transfer_in, transfer_out, owner_deposit, owner_withdrawal, adjustment, reversal), amount (signed: positive money in, negative money out), transaction_date, note, receipt_reference, reference (polymorphic, nullable: purchase or sale), transfer_group (uuid, nullable), reverses_transaction_id (nullable, unique: an entry is reversed at most once), created_by.
   - `note` is required for expense, adjustment, and reversal (the reason).
 
 Register short morph aliases (`purchase`, `sale`) with `Relation::morphMap()`, not `enforceMorphMap()`, which breaks Sanctum's token ownership lookup unless `User` is mapped too.
@@ -120,12 +120,18 @@ If reports ever become slow, cached columns may be added, but only alongside the
 
 ## 8. Business rules
 
-1. Stock never goes negative. Sales, negative adjustments, and voids that remove stock check current stock while holding a lock on the product rows, locked in a consistent order (by id) to avoid deadlocks. Lock order in every transaction: product rows (by id), then document rows, then the `document_sequences` row, then account rows (by id). Every money ledger write locks its account row.
+1. Stock never goes negative. Sales, negative adjustments, and voids that remove stock check current stock while holding a lock on the product rows, locked in a consistent order (by id) to avoid deadlocks. Lock order in every transaction: product rows (by id), then document rows, then the `document_sequences` row, then account rows (by id). Every money ledger write locks its account row. On MySQL (REPEATABLE READ) the first plain read in a transaction fixes its snapshot, so take the locks before any plain read whose result a later check depends on (read immutable rows, such as document items, before the transaction starts).
 2. A sale that is not fully paid when created requires a customer. Walk-in sales must be paid in full.
 3. A payment cannot exceed the balance due (422) and cannot be recorded against a voided document (409). Recording a payment locks the document row first. A payment against a purchase also needs `purchases.create`, so staff can only take payments for sales.
 4. A document can be voided only if its net payments are zero (any payments must be voided first) and the reversal passes the stock rule.
-5. Voiding requires a reason. The system records who voided it and when, and adds reversing stock movements. Voided documents remain visible, marked as voided, and are excluded from totals and reports.
-6. A wrong ledger entry (payment, expense, owner entry) is corrected by a reversal row that points to the original and has the opposite amount. Transfers are reversed as a pair.
+5. Voiding requires a reason. The system records who voided it and when, and adds reversing stock movements. Voided documents remain visible, marked as voided, and are excluded from totals and reports. Voiding an already voided document returns 409; a document with non-zero net payments returns 422. Locks: the item products (by id), then the document. A product deleted since the document was posted blocks the void (422).
+   - Voiding a purchase restores each product's `cost_price` to the item's `previous_cost_price`, but only when this purchase is still the latest active purchase of the product and the cost still equals the item's `unit_cost` (a later purchase or a manual edit is left alone).
+6. A wrong ledger entry (payment, expense, owner entry, transfer, adjustment) is corrected by a reversal row that points to the original and has the opposite amount. Transfers are reversed as a pair: reversing either side writes two reversal rows sharing a new `transfer_group`.
+   - A reversal keeps the original's document reference, so the document's paid amount and payment status follow automatically.
+   - A reversal cannot itself be reversed (422); record the correct entry again instead. An entry already reversed returns 409.
+   - The reversal is dated today by default. An earlier `transaction_date` may be sent, but never in the future and never before the original's date.
+   - Reversing a sale or purchase payment needs `payments.void`. Reversing any other entry needs `accounts.manage`.
+   - Locks: the referenced document (if any), then the account rows (by id); the "already reversed" check runs after the locks.
 7. A transfer needs two different accounts and always creates its two rows together.
 8. Item product ids within one document must be distinct. Quantities are at least 1.
 9. Prices and costs are copied to the items at creation. A sale item's `unit_price` defaults to the product's selling price and may be overridden per item; its `unit_cost` is always the product's cost price at that moment. A purchase sets each product's `cost_price` to the item's `unit_cost` (last purchase cost).
@@ -218,6 +224,7 @@ Each phase ends with passing tests and a commit before the next begins.
 - Costing method for profit (current: product cost at time of sale; later: weighted average).
 - Expense categories (small upgrade: a nullable category on expenses).
 - Returns and refunds workflow, due dates, credit limits.
+- An endpoint to restore a soft-deleted product (until then, a deleted product blocks voiding documents that use it).
 - Employees and payroll.
 - A screen for custom roles (the permission system already supports it).
 - Web or mobile client on top of the API.

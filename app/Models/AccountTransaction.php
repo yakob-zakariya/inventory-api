@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use LogicException;
 
@@ -54,6 +55,16 @@ class AccountTransaction extends Model
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);
+    }
+
+    /**
+     * The reversal row that cancelled this entry, if any.
+     *
+     * @return HasOne<AccountTransaction, $this>
+     */
+    public function reversal(): HasOne
+    {
+        return $this->hasOne(AccountTransaction::class, 'reverses_transaction_id');
     }
 
     /**
