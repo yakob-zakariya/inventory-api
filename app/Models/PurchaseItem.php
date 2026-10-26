@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['purchase_id', 'product_id', 'quantity', 'unit_cost'])]
+#[Fillable(['purchase_id', 'product_id', 'quantity', 'unit_cost', 'previous_cost_price'])]
 class PurchaseItem extends Model
 {
     /**
@@ -20,6 +20,7 @@ class PurchaseItem extends Model
         return [
             'quantity' => 'integer',
             'unit_cost' => 'decimal:2',
+            'previous_cost_price' => 'decimal:2',
         ];
     }
 

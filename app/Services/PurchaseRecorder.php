@@ -61,6 +61,7 @@ class PurchaseRecorder
                     'product_id' => $line['product']->id,
                     'quantity' => $line['quantity'],
                     'unit_cost' => Money::fromCents($line['unit_cost_cents']),
+                    'previous_cost_price' => $line['product']->cost_price,
                 ]);
 
                 $this->stock->record($line['product'], StockMovementType::Purchase, $line['quantity'], reference: $purchase);
