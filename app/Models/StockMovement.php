@@ -23,6 +23,11 @@ class StockMovement extends Model
     /** @use HasFactory<StockMovementFactory> */
     use HasFactory, RecordsCreator;
 
+    /**
+     * Rows per page in API lists.
+     */
+    protected $perPage = 10;
+
     protected static function booted(): void
     {
         static::updating(fn () => throw new LogicException('Stock movements are append-only and cannot be updated.'));

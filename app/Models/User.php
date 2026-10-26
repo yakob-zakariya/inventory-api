@@ -20,6 +20,11 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, HasRoles, Notifiable;
 
     /**
+     * Rows per page in API lists.
+     */
+    protected $perPage = 10;
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
