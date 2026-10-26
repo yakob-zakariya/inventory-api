@@ -18,7 +18,7 @@ class SaleController extends Controller
     public function index(IndexSaleRequest $request): AnonymousResourceCollection
     {
         $sales = Sale::query()
-            ->with('customer')
+            ->with(['customer', 'creator:id,name', 'voider:id,name'])
             ->withPaymentTotals()
             ->filter($request->validated())
             ->latest('sale_date')

@@ -59,6 +59,16 @@ class Purchase extends Model
     }
 
     /**
+     * The user who voided the document, if it is voided.
+     *
+     * @return BelongsTo<User, $this>
+     */
+    public function voider(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'voided_by');
+    }
+
+    /**
      * @return HasMany<PurchaseItem, $this>
      */
     public function items(): HasMany

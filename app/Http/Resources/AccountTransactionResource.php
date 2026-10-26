@@ -39,6 +39,7 @@ class AccountTransactionResource extends JsonResource
             'reverses_transaction_id' => $this->reverses_transaction_id,
             'reversed_by_transaction_id' => $this->whenLoaded('reversal', fn () => $this->reversal?->id),
             'created_by' => $this->created_by,
+            'created_by_user' => $this->creator?->only(['id', 'name']),
             'created_at' => $this->created_at,
         ];
     }

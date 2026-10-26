@@ -33,6 +33,7 @@ class StockMovementResource extends JsonResource
             'reference_id' => $this->reference_id,
             'reference_number' => $this->reference?->number,
             'created_by' => $this->created_by,
+            'created_by_user' => $this->creator?->only(['id', 'name']),
             'created_at' => $this->created_at,
         ];
     }

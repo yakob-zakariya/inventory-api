@@ -72,3 +72,50 @@ it('loads the ledger lists in a fixed number of queries', function (string $path
 
     expect(count(DB::getQueryLog()))->toBe($queries);
 })->with(['stock-movements', 'account-transactions']);
+
+it('names who created and who voided a record', function () {
+    $owner = actingAsOwner();
+    $owner->update(['name' => 'Almaz']);
+    [$product, $account, $purchase, $sale] = purchaseAndSale();
+    $sale->payments()->each(fn ($payment) => $this->postJson("/api/v1/account-transactions/{$payment->id}/reverse", ['reason' => 'x']));
+    $this->postJson("/api/v1/sales/{$sale->id}/void", ['reason' => 'Cancelled'])
+        ->assertJsonPath('data.voided_by_user', ['id' => $owner->id, 'name' => 'Almaz']);
+
+    $almaz = ['id' => $owner->id, 'name' => 'Almaz'];
+
+    $this->getJson('/api/v1/sales')
+        ->assertJsonPath('data.0.created_by_user', $almaz)
+        ->assertJsonPath('data.0.voided_by_user', $almaz);
+    $this->getJson('/api/v1/purchases')
+        ->assertJsonPath('data.0.created_by_user', $almaz)
+        ->assertJsonPath('data.0.voided_by_user', null);
+    $this->getJson("/api/v1/stock-movements?product_id={$product->id}")->assertJsonPath('data.0.created_by_user', $almaz);
+    $this->getJson("/api/v1/account-transactions?account_id={$account->id}")->assertJsonPath('data.0.created_by_user', $almaz);
+});
+
+it('lets staff see who created a record', function () {
+    actingAsOwner();
+    [$product] = purchaseAndSale();
+
+    actingAsStaff();
+
+    $this->getJson("/api/v1/stock-movements?product_id={$product->id}")
+        ->assertJsonPath('data.0.created_by_user.name', fn ($name) => is_string($name));
+});
+
+it('loads the document lists in a fixed number of queries', function (string $path) {
+    actingAsOwner();
+    purchaseAndSale();
+
+    $this->getJson("/api/v1/{$path}");
+    DB::enableQueryLog();
+    $this->getJson("/api/v1/{$path}")->assertOk();
+    $queries = count(DB::getQueryLog());
+
+    purchaseAndSale();
+    purchaseAndSale();
+    DB::flushQueryLog();
+    $this->getJson("/api/v1/{$path}")->assertOk();
+
+    expect(count(DB::getQueryLog()))->toBe($queries);
+})->with(['sales', 'purchases']);

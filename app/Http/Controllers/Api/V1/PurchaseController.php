@@ -18,7 +18,7 @@ class PurchaseController extends Controller
     public function index(IndexPurchaseRequest $request): AnonymousResourceCollection
     {
         $purchases = Purchase::query()
-            ->with('supplier')
+            ->with(['supplier', 'creator:id,name', 'voider:id,name'])
             ->withPaymentTotals()
             ->filter($request->validated())
             ->latest('purchase_date')
