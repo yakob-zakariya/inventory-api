@@ -34,36 +34,19 @@ class SaleRecorder
     public function record(array $data): Sale
     {
         return DB::transaction(function () use ($data) {
-            $products = $this->products->lock($data['items']);
-
-            $lines = array_map(function (array $item) use ($products) {
-                $product = $products[$item['product_id']];
-
-                return [
-                    'product' => $product,
-                    'quantity' => (int) $item['quantity'],
-                    'unit_price_cents' => Money::toCents($item['unit_price'] ?? $product->selling_price),
-                    'unit_cost_cents' => Money::toCents($product->cost_price),
-                ];
-            }, $data['items']);
-
-            $totalCents = array_sum(array_map(fn (array $line) => $line['quantity'] * $line['unit_price_cents'], $lines));
-            $payments = DocumentPayments::fromInput($data['payments'] ?? [], $totalCents);
-
-            if ($payments->totalCents < $totalCents && empty($data['customer_id'])) {
-                throw new BusinessRuleException('A customer is required for a sale that is not fully paid.');
-            }
+            $draft = SaleDraft::make($data, $this->products->lock($data['items']));
+            $draft->assertSavable();
 
             $sale = Sale::create([
                 'number' => $this->numberer->next(DocumentType::Sale),
                 'customer_id' => $data['customer_id'] ?? null,
                 'sale_date' => $data['sale_date'] ?? now()->toDateString(),
-                'total_amount' => Money::fromCents($totalCents),
+                'total_amount' => Money::fromCents($draft->totalCents),
                 'note' => $data['note'] ?? null,
                 'status' => DocumentStatus::Active,
             ]);
 
-            foreach ($lines as $line) {
+            foreach ($draft->lines as $line) {
                 $sale->items()->create([
                     'product_id' => $line['product']->id,
                     'quantity' => $line['quantity'],
@@ -74,7 +57,7 @@ class SaleRecorder
                 $this->stock->record($line['product'], StockMovementType::Sale, -$line['quantity'], reference: $sale);
             }
 
-            foreach ($payments->lines as $payment) {
+            foreach ($draft->payments->lines as $payment) {
                 $this->money->record(
                     Account::findOrFail($payment['account_id']),
                     AccountTransactionType::SalePayment,

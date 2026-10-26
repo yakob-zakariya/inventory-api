@@ -5,9 +5,12 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\IndexPurchaseRequest;
 use App\Http\Requests\Api\V1\StorePurchaseRequest;
+use App\Http\Requests\Api\V1\UpdatePurchaseRequest;
 use App\Http\Requests\Api\V1\VoidDocumentRequest;
+use App\Http\Resources\DocumentPreviewResource;
 use App\Http\Resources\PurchaseResource;
 use App\Models\Purchase;
+use App\Services\DocumentPreviewer;
 use App\Services\DocumentVoider;
 use App\Services\PurchaseRecorder;
 use Illuminate\Http\JsonResponse;
@@ -35,8 +38,26 @@ class PurchaseController extends Controller
         return (new PurchaseResource($this->loadDetails($purchase)))->response()->setStatusCode(201);
     }
 
+    /**
+     * Price a new purchase without saving it. Field errors are a 422 as in store; business rules come back as `problems`.
+     */
+    public function preview(StorePurchaseRequest $request, DocumentPreviewer $previewer): DocumentPreviewResource
+    {
+        return new DocumentPreviewResource($previewer->purchase($request->validated()));
+    }
+
     public function show(Purchase $purchase): PurchaseResource
     {
+        return new PurchaseResource($this->loadDetails($purchase));
+    }
+
+    /**
+     * Edit the purchase's non-financial fields. Allowed on voided purchases too.
+     */
+    public function update(UpdatePurchaseRequest $request, Purchase $purchase): PurchaseResource
+    {
+        $purchase->update($request->validated());
+
         return new PurchaseResource($this->loadDetails($purchase));
     }
 
@@ -53,7 +74,7 @@ class PurchaseController extends Controller
     private function loadDetails(Purchase $purchase): Purchase
     {
         return $purchase
-            ->load(['supplier', 'items.product', 'payments.account'])
+            ->load(['supplier', 'items.product', 'payments.account', 'payments.creator:id,name', 'payments.reversal:id,reverses_transaction_id'])
             ->loadSum('payments as payments_sum', 'amount');
     }
 }

@@ -5,9 +5,12 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\IndexSaleRequest;
 use App\Http\Requests\Api\V1\StoreSaleRequest;
+use App\Http\Requests\Api\V1\UpdateSaleRequest;
 use App\Http\Requests\Api\V1\VoidDocumentRequest;
+use App\Http\Resources\DocumentPreviewResource;
 use App\Http\Resources\SaleResource;
 use App\Models\Sale;
+use App\Services\DocumentPreviewer;
 use App\Services\DocumentVoider;
 use App\Services\SaleRecorder;
 use Illuminate\Http\JsonResponse;
@@ -35,8 +38,26 @@ class SaleController extends Controller
         return (new SaleResource($this->loadDetails($sale)))->response()->setStatusCode(201);
     }
 
+    /**
+     * Price a new sale without saving it. Field errors are a 422 as in store; business rules come back as `problems`.
+     */
+    public function preview(StoreSaleRequest $request, DocumentPreviewer $previewer): DocumentPreviewResource
+    {
+        return new DocumentPreviewResource($previewer->sale($request->validated()));
+    }
+
     public function show(Sale $sale): SaleResource
     {
+        return new SaleResource($this->loadDetails($sale));
+    }
+
+    /**
+     * Edit the sale's non-financial fields. Allowed on voided sales too.
+     */
+    public function update(UpdateSaleRequest $request, Sale $sale): SaleResource
+    {
+        $sale->update($request->validated());
+
         return new SaleResource($this->loadDetails($sale));
     }
 
@@ -53,7 +74,7 @@ class SaleController extends Controller
     private function loadDetails(Sale $sale): Sale
     {
         return $sale
-            ->load(['customer', 'items.product', 'payments.account'])
+            ->load(['customer', 'items.product', 'payments.account', 'payments.creator:id,name', 'payments.reversal:id,reverses_transaction_id'])
             ->loadSum('payments as payments_sum', 'amount');
     }
 }

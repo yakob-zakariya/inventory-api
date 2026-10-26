@@ -119,3 +119,37 @@ it('loads the document lists in a fixed number of queries', function (string $pa
 
     expect(count(DB::getQueryLog()))->toBe($queries);
 })->with(['sales', 'purchases']);
+
+it('shows on a document which payments were reversed and by whom they were recorded', function () {
+    $owner = actingAsOwner();
+    [, , , $sale] = purchaseAndSale();
+    $payment = $sale->payments()->sole();
+    $reversalId = $this->postJson("/api/v1/account-transactions/{$payment->id}/reverse", ['reason' => 'Wrong'])->json('data.0.id');
+
+    $this->getJson("/api/v1/sales/{$sale->id}")
+        ->assertJsonPath('data.payments.0.id', $payment->id)
+        ->assertJsonPath('data.payments.0.reverses_transaction_id', null)
+        ->assertJsonPath('data.payments.0.reversed_by_transaction_id', $reversalId)
+        ->assertJsonPath('data.payments.0.created_by_user', ['id' => $owner->id, 'name' => $owner->name])
+        ->assertJsonPath('data.payments.1.id', $reversalId)
+        ->assertJsonPath('data.payments.1.reverses_transaction_id', $payment->id)
+        ->assertJsonPath('data.payments.1.reversed_by_transaction_id', null);
+});
+
+it('loads a document with many payments in a fixed number of queries', function () {
+    actingAsOwner();
+    [, $account, , $sale] = purchaseAndSale();
+    $this->postJson("/api/v1/account-transactions/{$sale->payments()->sole()->id}/reverse", ['reason' => 'Wrong']);
+
+    $this->getJson("/api/v1/sales/{$sale->id}");
+    DB::enableQueryLog();
+    $this->getJson("/api/v1/sales/{$sale->id}")->assertOk();
+    $queries = count(DB::getQueryLog());
+
+    $this->postJson('/api/v1/payments', ['document_type' => 'sale', 'document_id' => $sale->id, 'account_id' => $account->id, 'amount' => '0.50']);
+    $this->postJson('/api/v1/payments', ['document_type' => 'sale', 'document_id' => $sale->id, 'account_id' => $account->id, 'amount' => '0.50']);
+    DB::flushQueryLog();
+    $this->getJson("/api/v1/sales/{$sale->id}")->assertOk()->assertJsonCount(4, 'data.payments');
+
+    expect(count(DB::getQueryLog()))->toBe($queries);
+});

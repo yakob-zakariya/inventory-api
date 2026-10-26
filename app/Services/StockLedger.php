@@ -65,12 +65,7 @@ class StockLedger
             $onHand = $this->stockOf($product);
 
             if ($onHand + $quantity < 0) {
-                throw new BusinessRuleException(sprintf(
-                    'Not enough stock for %s: %d on hand, %d requested.',
-                    $product->sku,
-                    $onHand,
-                    -$quantity,
-                ));
+                throw static::notEnoughStock($product, $onHand, -$quantity);
             }
         }
 
@@ -82,6 +77,19 @@ class StockLedger
             'reference_id' => $reference?->getKey(),
             'note' => $note,
         ]);
+    }
+
+    /**
+     * The error for taking more stock than is on hand.
+     */
+    public static function notEnoughStock(Product $product, int $onHand, int $requested): BusinessRuleException
+    {
+        return new BusinessRuleException(sprintf(
+            'Not enough stock for %s: %d on hand, %d requested.',
+            $product->sku,
+            $onHand,
+            $requested,
+        ));
     }
 
     private function ensureInTransaction(): void

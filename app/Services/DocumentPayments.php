@@ -2,11 +2,10 @@
 
 namespace App\Services;
 
-use App\Exceptions\BusinessRuleException;
 use App\Support\Money;
 
 /**
- * The payments sent with a new document, converted to cents and checked against its total.
+ * The payments sent with a new document, converted to cents.
  */
 final readonly class DocumentPayments
 {
@@ -20,10 +19,8 @@ final readonly class DocumentPayments
 
     /**
      * @param  list<array{account_id: int, amount: string|int|float, receipt_reference?: ?string}>  $payments
-     *
-     * @throws BusinessRuleException when the payments exceed the document total
      */
-    public static function fromInput(array $payments, int $documentTotalCents): self
+    public static function fromInput(array $payments): self
     {
         $lines = array_map(fn (array $payment) => [
             'account_id' => (int) $payment['account_id'],
@@ -31,16 +28,22 @@ final readonly class DocumentPayments
             'receipt_reference' => $payment['receipt_reference'] ?? null,
         ], $payments);
 
-        $paidCents = array_sum(array_column($lines, 'cents'));
+        return new self($lines, array_sum(array_column($lines, 'cents')));
+    }
 
-        if ($paidCents > $documentTotalCents) {
-            throw new BusinessRuleException(sprintf(
-                'Payments (%s) exceed the document total (%s).',
-                Money::fromCents($paidCents),
-                Money::fromCents($documentTotalCents),
-            ));
+    /**
+     * The problem when the payments exceed the document total, if they do.
+     */
+    public function overpaymentOf(int $documentTotalCents): ?DocumentProblem
+    {
+        if ($this->totalCents <= $documentTotalCents) {
+            return null;
         }
 
-        return new self($lines, $paidCents);
+        return new DocumentProblem('overpaid', sprintf(
+            'Payments (%s) exceed the document total (%s).',
+            Money::fromCents($this->totalCents),
+            Money::fromCents($documentTotalCents),
+        ), 'payments');
     }
 }
