@@ -77,7 +77,9 @@ class RoleController extends Controller
         $users = $role->users()->count();
 
         if ($users > 0) {
-            throw new ConflictException("{$users} ".str('user')->plural($users)." still have the role \"{$role->name}\". Give them another role first.");
+            $who = $users === 1 ? '1 user still has' : "{$users} users still have";
+
+            throw new ConflictException("{$who} the role \"{$role->name}\". Give them another role first.");
         }
 
         $role->delete();

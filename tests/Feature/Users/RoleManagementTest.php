@@ -140,3 +140,11 @@ it('is for users who manage users', function () {
     $this->getJson('/api/v1/roles')->assertForbidden();
     $this->postJson('/api/v1/roles', ['name' => 'X', 'permissions' => []])->assertForbidden();
 });
+
+it('says "has" when one user still has the role', function () {
+    actingAsOwner();
+    $cashier = Role::findOrCreate('Cashier', 'web');
+    User::factory()->create()->assignRole($cashier);
+
+    $this->deleteJson("/api/v1/roles/{$cashier->id}")->assertJsonPath('message', '1 user still has the role "Cashier". Give them another role first.');
+});
