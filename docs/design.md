@@ -69,6 +69,7 @@ Every master data table also has `created_by` (nullable, the user who created th
 - `customers`: name, phone (unique when present), address, deleted_at.
 - `products`: category_id, sku (unique), name, description, unit (text label such as "bag"), cost_price, selling_price, reorder_level (integer), deleted_at.
 - `accounts`: name (unique), type (cash, bank, mobile_money), opening_balance, is_active. Accounts are never deleted, only deactivated. `opening_balance` may be negative (an account that starts overdrawn) and is fixed once the account is created; a wrong opening balance is corrected with an `adjustment` transaction.
+- `shop_settings`: one row with name, address, phone, email, tin, printed on documents. The migration creates it from the `SHOP_*` environment values; after that the shop edits it in the app. The currency is not stored: it comes from `SHOP_CURRENCY` and is fixed at installation, because amounts are never converted.
 
 ### Documents
 - `purchases`: number (unique, for example PUR-000123), supplier_id, invoice_number, purchase_date, total_amount, note, status (active, voided), voided_at, voided_by, void_reason, created_by.
@@ -186,7 +187,7 @@ Prefix `/api/v1`. All routes except login need a Sanctum token. Permissions are 
 - Edit: only the note (sales) or the note and invoice number (purchases), also on voided documents; any other field is a 422.
 - Document lists: `search` (number, customer or supplier name, purchase invoice number) and `payment_status=unpaid|partial|paid` (active documents only), besides party, status and dates.
 - Viewing: purchases need `purchases.create`. Sales are visible to any logged-in user, but sale items show `unit_cost` only to users with `reports.view`.
-- Proformas: `GET /proformas` (search, status including `expired`, customer, dates), `GET /proformas/{id}`, `POST /proformas`, `POST /proformas/preview`, `PATCH /proformas/{id}`, `POST /proformas/{id}/cancel`, `POST /proformas/{id}/convert`. Viewing is open to any logged-in user like sales; changes need `sales.create`. Printing is done by the client with `GET /shop` (shop name, address, phone, TIN from configuration).
+- Proformas: `GET /proformas` (search, status including `expired`, customer, dates), `GET /proformas/{id}`, `POST /proformas`, `POST /proformas/preview`, `PATCH /proformas/{id}`, `POST /proformas/{id}/cancel`, `POST /proformas/{id}/convert`. Viewing is open to any logged-in user like sales; changes need `sales.create`. Printing is done by the client with `GET /shop` (shop name, address, phone, email, TIN and currency); `PATCH /shop` changes them with `settings.manage`, except the currency (422).
 - Money: `GET /account-transactions`, `POST /payments` (against a document), `POST /expenses`, `POST /transfers`, `POST /owner-entries`, `POST /account-adjustments`, `POST /account-transactions/{id}/reverse`.
 - Reports: stock levels and low stock, supplier payables, customer receivables, account balances, cash flow, profit.
 - `GET /reports/summary` (`reports.view`): account balances, inventory value, receivables, payables and net worth, as of now.
@@ -204,7 +205,7 @@ Prefix `/api/v1`. All routes except login need a Sanctum token. Permissions are 
 
 ## 11. Permissions (v1 proposal)
 
-Named permissions: `products.manage`, `stock.adjust`, `purchases.create`, `purchases.void`, `sales.create`, `sales.void`, `payments.record`, `payments.void`, `expenses.record`, `accounts.manage`, `suppliers.manage`, `customers.manage`, `reports.view`, `users.manage`.
+Named permissions: `products.manage`, `stock.adjust`, `purchases.create`, `purchases.void`, `sales.create`, `sales.void`, `payments.record`, `payments.void`, `expenses.record`, `accounts.manage`, `suppliers.manage`, `customers.manage`, `reports.view`, `users.manage`, `settings.manage` (edit the shop details, `PATCH /shop`).
 
 - **owner:** all permissions.
 - **staff (for shops with more than one user):** view master data, `customers.manage` (to register credit customers), `sales.create`, `payments.record` for sales. No voiding, purchases, expenses, accounts, or reports.

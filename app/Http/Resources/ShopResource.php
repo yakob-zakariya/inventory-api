@@ -2,11 +2,12 @@
 
 namespace App\Http\Resources;
 
+use App\Models\ShopSetting;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * @property array{name: string, address: ?string, phone: ?string, email: ?string, tin: ?string, currency: string} $resource
+ * @mixin ShopSetting
  */
 class ShopResource extends JsonResource
 {
@@ -18,12 +19,13 @@ class ShopResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'name' => $this->resource['name'],
-            'address' => $this->resource['address'],
-            'phone' => $this->resource['phone'],
-            'email' => $this->resource['email'],
-            'tin' => $this->resource['tin'],
-            'currency' => $this->resource['currency'],
+            'name' => $this->name,
+            'address' => $this->address,
+            'phone' => $this->phone,
+            'email' => $this->email,
+            'tin' => $this->tin,
+            'currency' => config('shop.currency'),
+            'updated_at' => $this->updated_at,
         ];
     }
 }

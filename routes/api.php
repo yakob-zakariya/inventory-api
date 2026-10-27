@@ -39,7 +39,10 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::post('auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
         Route::delete('auth/session', [AuthController::class, 'endSession'])->name('auth.session.destroy');
         Route::get('auth/me', [AuthController::class, 'me'])->name('auth.me');
-        Route::get('shop', ShopController::class)->name('shop.show');
+        Route::get('shop', [ShopController::class, 'show'])->name('shop.show');
+        Route::patch('shop', [ShopController::class, 'update'])
+            ->middleware('permission:'.Permission::SettingsManage->value)
+            ->name('shop.update');
         Route::post('auth/password', [AuthController::class, 'changePassword'])->name('auth.password');
 
         Route::middleware('permission:'.Permission::UsersManage->value)->group(function () {

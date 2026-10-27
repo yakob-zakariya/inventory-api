@@ -5,9 +5,10 @@
 | Shop details
 |--------------------------------------------------------------------------
 |
-| Printed on proformas and other documents by the clients. One shop per
-| deployment, so they live in the environment. A settings screen may move
-| them to the database later.
+| The starting values for the shop's details. The shop_settings migration
+| copies them into the database, where the owner edits them (PATCH /shop);
+| changing them here afterwards has no effect. The currency is read from
+| here only and is fixed at installation.
 |
 */
 

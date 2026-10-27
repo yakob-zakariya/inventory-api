@@ -6945,6 +6945,178 @@
       "description": "Quote, edit, convert to a sale, cancel. A proforma never touches stock or money until it is converted.",
       "item": [
         {
+          "name": "Owner fills in the shop details",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shop",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shop"
+              ]
+            },
+            "description": "SHOP_* in .env are only the starting values.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Demo Building Supplies\",\n  \"address\": \"Bole, Addis Ababa\",\n  \"phone\": \"0911 000000\",\n  \"tin\": \"0012345678\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.phone = \\\"0911 000000\\\"\", () => pm.expect(j[\"data\"][\"phone\"]).to.eql(\"0911 000000\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Staff cannot change them",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shop",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shop"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"0900 000000\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "The currency is fixed",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shop",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shop"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currency\": \"USD\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 422\", () => pm.response.to.have.status(422));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"errors.currency.0 = \\\"The currency is set when the system is installed and cannot be changed here.\\\"\", () => pm.expect(j[\"errors\"][\"currency\"][0]).to.eql(\"The currency is set when the system is installed and cannot be changed here.\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Shop details for the printout",
           "request": {
             "method": "GET",
@@ -6963,7 +7135,7 @@
                 "shop"
               ]
             },
-            "description": "Set SHOP_NAME, SHOP_ADDRESS, SHOP_PHONE, SHOP_TIN in .env.",
+            "description": "",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -6983,6 +7155,7 @@
                 "exec": [
                   "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
                   "const j = pm.response.json();",
+                  "pm.test(\"data.phone = \\\"0911 000000\\\"\", () => pm.expect(j[\"data\"][\"phone\"]).to.eql(\"0911 000000\"));",
                   "pm.test(\"data.currency = \\\"ETB\\\"\", () => pm.expect(j[\"data\"][\"currency\"]).to.eql(\"ETB\"));"
                 ]
               }
