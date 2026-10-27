@@ -30,3 +30,21 @@ it('can run again without creating duplicates', function () {
         ->and(RoleModel::count())->toBe(2)
         ->and(RoleModel::findByName(Role::Owner->value)->permissions)->toHaveCount(count(Permission::cases()));
 });
+
+it('keeps the shop\'s edits to staff and custom roles when it runs again', function () {
+    RoleModel::findByName(Role::Staff->value)->syncPermissions(['sales.create', 'reports.view']);
+    RoleModel::findOrCreate('cashier')->syncPermissions(['sales.create']);
+
+    $this->seed(RolesAndPermissionsSeeder::class);
+
+    expect(RoleModel::findByName(Role::Staff->value)->permissions->pluck('name')->sort()->values()->all())->toBe(['reports.view', 'sales.create'])
+        ->and(RoleModel::findByName('cashier')->permissions->pluck('name')->all())->toBe(['sales.create']);
+});
+
+it('gives the owner back any permission taken away', function () {
+    RoleModel::findByName(Role::Owner->value)->revokePermissionTo('reports.view');
+
+    $this->seed(RolesAndPermissionsSeeder::class);
+
+    expect(RoleModel::findByName(Role::Owner->value)->permissions)->toHaveCount(count(Permission::cases()));
+});

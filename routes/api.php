@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\CustomerController;
 use App\Http\Controllers\Api\V1\ExpenseController;
 use App\Http\Controllers\Api\V1\OwnerEntryController;
 use App\Http\Controllers\Api\V1\PaymentController;
+use App\Http\Controllers\Api\V1\PermissionController;
 use App\Http\Controllers\Api\V1\ProductController;
 use App\Http\Controllers\Api\V1\PurchaseController;
 use App\Http\Controllers\Api\V1\ReportController;
@@ -38,6 +39,7 @@ Route::prefix('v1')->name('v1.')->group(function () {
 
         Route::middleware('permission:'.Permission::UsersManage->value)->group(function () {
             Route::apiResource('users', UserController::class)->only(['index', 'store']);
+            Route::get('permissions', [PermissionController::class, 'index'])->name('permissions.index');
         });
 
         // Master data: any logged-in user can read, writes need the matching permission.
