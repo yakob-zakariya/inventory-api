@@ -6,7 +6,9 @@ use App\Models\AccountTransaction;
 use App\Models\Customer;
 use App\Models\Product;
 use App\Models\StockMovement;
+use App\Models\User;
 use App\Services\SaleRecorder;
+use Laravel\Sanctum\Sanctum;
 
 beforeEach(function () {
     actingAsOwner();
@@ -50,3 +52,14 @@ it('combines search with the other filters', function () {
 it('returns the whole ledger without a search', function () {
     $this->getJson('/api/v1/account-transactions')->assertJsonCount(3, 'data');
 });
+
+it('lets users who manage accounts or view reports read the ledger', function (array $permissions, int $status) {
+    Sanctum::actingAs(User::factory()->create()->givePermissionTo($permissions));
+
+    $this->getJson('/api/v1/account-transactions')->assertStatus($status);
+})->with([
+    'reports.view' => [['reports.view'], 200],
+    'accounts.manage' => [['accounts.manage'], 200],
+    'expenses.record only' => [['expenses.record'], 403],
+    'payments.record only' => [['payments.record'], 403],
+]);

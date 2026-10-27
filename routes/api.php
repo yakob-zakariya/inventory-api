@@ -115,9 +115,13 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::post('account-transactions/{accountTransaction}/reverse', [AccountTransactionController::class, 'reverse'])
             ->name('account-transactions.reverse');
 
-        // Money ledger and reports.
+        // The ledger: for reports, and for users who record money and may need to find an entry to reverse.
+        Route::get('account-transactions', [AccountTransactionController::class, 'index'])
+            ->middleware('permission:'.Permission::ReportsView->value.'|'.Permission::AccountsManage->value)
+            ->name('account-transactions.index');
+
+        // Reports.
         Route::middleware('permission:'.Permission::ReportsView->value)->group(function () {
-            Route::get('account-transactions', [AccountTransactionController::class, 'index'])->name('account-transactions.index');
             Route::get('reports/summary', [ReportController::class, 'summary'])->name('reports.summary');
             Route::get('reports/profit', [ReportController::class, 'profit'])->name('reports.profit');
             Route::get('reports/cash-flow', [ReportController::class, 'cashFlow'])->name('reports.cash-flow');
