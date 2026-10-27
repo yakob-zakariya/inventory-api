@@ -111,6 +111,7 @@ Route::prefix('v1')->name('v1.')->group(function () {
             Route::post('proformas', [ProformaController::class, 'store'])->name('proformas.store');
             Route::patch('proformas/{proforma}', [ProformaController::class, 'update'])->name('proformas.update');
             Route::post('proformas/{proforma}/cancel', [ProformaController::class, 'cancel'])->name('proformas.cancel');
+            Route::post('proformas/{proforma}/convert', [ProformaController::class, 'convert'])->name('proformas.convert');
         });
 
         // Later payments against a purchase or sale (purchases also need purchases.create).
