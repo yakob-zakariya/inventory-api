@@ -207,7 +207,14 @@ Implementation with spatie/laravel-permission:
 - After changing permissions, run `php artisan permission:cache-reset`.
 - The package's teams feature is not used (single-tenant).
 
-A screen for custom roles is deferred, but nothing in the checks has to change when it is added.
+Custom roles and user management (`users.manage`):
+- `GET /permissions` lists the permissions with a label and a group for the role editor. `GET/POST/PATCH/DELETE /roles` manage roles as a name plus permission names. One role per user.
+- The owner role always has every permission and cannot be edited or deleted (409). The seeder re-syncs it, so a new permission reaches the owner. Staff and custom roles are editable; the seeder creates staff only when it is missing and never overwrites edits.
+- No escalation: a user can create, edit or assign only roles whose permissions they hold themselves (403). The owner holds all of them.
+- A role in use cannot be deleted (409). No change may leave the shop without an active user holding `users.manage` (409); nobody can deactivate themselves.
+- Users can be edited (name, email, role) and deactivated. Deactivating ends all of the user's tokens and sessions, and an inactive user is refused on login and on every request (their old token gets 401). Their history keeps their name.
+- Passwords: an admin can set a new password for a user, which ends that user's logins; any user can change their own with the current password, which ends their other logins.
+- Permission changes take effect on the next request (checks read permissions per request; the cache is flushed on every role change).
 
 ## 12. Operations and quality
 
