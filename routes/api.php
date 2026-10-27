@@ -107,6 +107,7 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::middleware('permission:'.Permission::AccountsManage->value)->group(function () {
             Route::post('transfers', TransferController::class)->name('transfers.store');
             Route::post('owner-entries', OwnerEntryController::class)->name('owner-entries.store');
+            Route::post('account-adjustments/preview', [AccountAdjustmentController::class, 'preview'])->name('account-adjustments.preview');
             Route::post('account-adjustments', AccountAdjustmentController::class)->name('account-adjustments.store');
         });
 
