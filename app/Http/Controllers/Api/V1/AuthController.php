@@ -4,19 +4,24 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Exceptions\BusinessRuleException;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\ChangePasswordRequest;
 use App\Http\Requests\Api\V1\LoginRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use App\Services\AccessControl;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use Laravel\Sanctum\PersonalAccessToken;
 use Laravel\Sanctum\TransientToken;
 
 class AuthController extends Controller
 {
+    private const DEACTIVATED = 'This account is deactivated. Ask the shop owner to reactivate it.';
+
     /**
      * Exchange email and password for a new API token.
      */
@@ -28,6 +33,10 @@ class AuthController extends Controller
             throw ValidationException::withMessages([
                 'email' => __('auth.failed'),
             ]);
+        }
+
+        if (! $user->is_active) {
+            throw ValidationException::withMessages(['email' => self::DEACTIVATED]);
         }
 
         $token = $user->createToken($request->tokenName())->plainTextToken;
@@ -53,6 +62,12 @@ class AuthController extends Controller
             throw ValidationException::withMessages([
                 'email' => __('auth.failed'),
             ]);
+        }
+
+        if (! Auth::guard('web')->user()->is_active) {
+            Auth::guard('web')->logout();
+
+            throw ValidationException::withMessages(['email' => self::DEACTIVATED]);
         }
 
         $request->session()->regenerate();
@@ -86,6 +101,24 @@ class AuthController extends Controller
         }
 
         $token->delete();
+
+        return response()->noContent();
+    }
+
+    /**
+     * Change the logged-in user's own password. Their other logins end; this one stays.
+     */
+    public function changePassword(ChangePasswordRequest $request, AccessControl $access): Response
+    {
+        $user = $request->user();
+        $user->update(['password' => $request->validated('password')]);
+
+        $token = $user->currentAccessToken();
+        $access->endLogins(
+            $user,
+            exceptTokenId: $token instanceof PersonalAccessToken ? $token->id : null,
+            exceptSessionId: $request->hasSession() ? $request->session()->getId() : null,
+        );
 
         return response()->noContent();
     }

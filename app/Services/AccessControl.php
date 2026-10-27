@@ -36,6 +36,16 @@ class AccessControl
     }
 
     /**
+     * Refuse to manage a user who holds permissions the acting user does not (for example the owner).
+     *
+     * @throws AccessDeniedHttpException
+     */
+    public function assertCanManageUser(User $actor, User $user): void
+    {
+        $this->assertCanGrant($actor, $user->getAllPermissions()->pluck('name'));
+    }
+
+    /**
      * @throws AccessDeniedHttpException when the role gives more than the actor holds
      */
     public function assertCanManageRole(User $actor, RoleModel $role): void
@@ -78,6 +88,22 @@ class AccessControl
         } finally {
             // The permission cache may have been rebuilt inside a transaction that was rolled back.
             app(PermissionRegistrar::class)->forgetCachedPermissions();
+        }
+    }
+
+    /**
+     * End the user's logins: every API token and, with database sessions, every web session.
+     * Pass the current token or session id to keep the login making the request.
+     */
+    public function endLogins(User $user, ?int $exceptTokenId = null, ?string $exceptSessionId = null): void
+    {
+        $user->tokens()->when($exceptTokenId, fn ($query, int $id) => $query->whereKeyNot($id))->delete();
+
+        if (config('session.driver') === 'database') {
+            DB::table(config('session.table'))
+                ->where('user_id', $user->id)
+                ->when($exceptSessionId, fn ($query, string $id) => $query->where('id', '!=', $id))
+                ->delete();
         }
     }
 }

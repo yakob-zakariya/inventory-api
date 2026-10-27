@@ -3,7 +3,7 @@
 namespace App\Http\Requests\Api\V1;
 
 use App\Enums\Permission;
-use App\Enums\Role;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -29,7 +29,7 @@ class StoreUserRequest extends FormRequest
     {
         return [
             ...self::accountRules(),
-            'role' => ['required', Rule::enum(Role::class)],
+            'role' => ['required', 'string', Rule::exists(Role::class, 'name')],
         ];
     }
 
