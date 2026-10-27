@@ -3,8 +3,8 @@
 namespace App\Enums;
 
 /**
- * The fixed roles shipped with v1. Only seeders and setup commands use these;
- * authorization checks always use {@see Permission}.
+ * The built-in roles. Only seeders, setup commands and the owner-role lock use these;
+ * authorization checks always use {@see Permission}. Shops can add their own roles.
  */
 enum Role: string
 {
@@ -12,7 +12,7 @@ enum Role: string
     case Staff = 'staff';
 
     /**
-     * The permissions granted to this role by the seeder.
+     * The permissions the seeder gives this role when it creates it.
      *
      * @return list<Permission>
      */

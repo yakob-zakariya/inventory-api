@@ -37,7 +37,9 @@ class UserResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'email' => $this->email,
+            'role' => $this->whenLoaded('roles', fn () => $this->roles->first()?->name),
             'roles' => $this->whenLoaded('roles', fn () => $this->roles->pluck('name')),
+            'is_active' => $this->is_active,
             'permissions' => $this->when(
                 $this->includePermissions,
                 fn () => $this->getAllPermissions()->pluck('name')->sort()->values(),

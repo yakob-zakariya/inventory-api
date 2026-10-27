@@ -10,9 +10,11 @@ use App\Http\Controllers\Api\V1\CustomerController;
 use App\Http\Controllers\Api\V1\ExpenseController;
 use App\Http\Controllers\Api\V1\OwnerEntryController;
 use App\Http\Controllers\Api\V1\PaymentController;
+use App\Http\Controllers\Api\V1\PermissionController;
 use App\Http\Controllers\Api\V1\ProductController;
 use App\Http\Controllers\Api\V1\PurchaseController;
 use App\Http\Controllers\Api\V1\ReportController;
+use App\Http\Controllers\Api\V1\RoleController;
 use App\Http\Controllers\Api\V1\SaleController;
 use App\Http\Controllers\Api\V1\StockAdjustmentController;
 use App\Http\Controllers\Api\V1\StockMovementController;
@@ -31,13 +33,19 @@ Route::prefix('v1')->name('v1.')->group(function () {
         ->middleware('throttle:login')
         ->name('auth.session.store');
 
-    Route::middleware('auth:sanctum')->group(function () {
+    Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::post('auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
         Route::delete('auth/session', [AuthController::class, 'endSession'])->name('auth.session.destroy');
         Route::get('auth/me', [AuthController::class, 'me'])->name('auth.me');
+        Route::post('auth/password', [AuthController::class, 'changePassword'])->name('auth.password');
 
         Route::middleware('permission:'.Permission::UsersManage->value)->group(function () {
-            Route::apiResource('users', UserController::class)->only(['index', 'store']);
+            Route::apiResource('users', UserController::class)->except(['destroy']);
+            Route::post('users/{user}/deactivate', [UserController::class, 'deactivate'])->name('users.deactivate');
+            Route::post('users/{user}/activate', [UserController::class, 'activate'])->name('users.activate');
+            Route::post('users/{user}/password', [UserController::class, 'resetPassword'])->name('users.password');
+            Route::get('permissions', [PermissionController::class, 'index'])->name('permissions.index');
+            Route::apiResource('roles', RoleController::class);
         });
 
         // Master data: any logged-in user can read, writes need the matching permission.

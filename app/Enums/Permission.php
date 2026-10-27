@@ -20,6 +20,44 @@ enum Permission: string
     case UsersManage = 'users.manage';
 
     /**
+     * What the permission allows, as shown in the role editor.
+     */
+    public function label(): string
+    {
+        return match ($this) {
+            self::ProductsManage => 'Create, edit and delete products and categories',
+            self::StockAdjust => 'Adjust stock with a reason',
+            self::PurchasesCreate => 'Record purchases, see them and pay suppliers',
+            self::PurchasesVoid => 'Void purchases',
+            self::SalesCreate => 'Record sales and edit their notes',
+            self::SalesVoid => 'Void sales',
+            self::PaymentsRecord => 'Take payments against sales (and purchases, with purchases)',
+            self::PaymentsVoid => 'Reverse payments',
+            self::ExpensesRecord => 'Record expenses',
+            self::AccountsManage => 'Manage accounts, transfers, owner entries, reconciliation and reversals',
+            self::SuppliersManage => 'Create, edit and delete suppliers',
+            self::CustomersManage => 'Create, edit and delete customers',
+            self::ReportsView => 'See reports, balances, costs and the money ledger',
+            self::UsersManage => 'Manage users and roles',
+        };
+    }
+
+    /**
+     * The section the permission is listed under in the role editor.
+     */
+    public function group(): string
+    {
+        return match ($this) {
+            self::ProductsManage, self::StockAdjust => 'Products and stock',
+            self::PurchasesCreate, self::PurchasesVoid, self::SuppliersManage => 'Purchases',
+            self::SalesCreate, self::SalesVoid, self::CustomersManage => 'Sales',
+            self::PaymentsRecord, self::PaymentsVoid, self::ExpensesRecord, self::AccountsManage => 'Money',
+            self::ReportsView => 'Reports',
+            self::UsersManage => 'Administration',
+        };
+    }
+
+    /**
      * @return list<string>
      */
     public static function values(): array
