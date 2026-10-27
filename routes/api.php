@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\V1\OwnerEntryController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\PermissionController;
 use App\Http\Controllers\Api\V1\ProductController;
+use App\Http\Controllers\Api\V1\ProformaController;
 use App\Http\Controllers\Api\V1\PurchaseController;
 use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\RoleController;
@@ -102,6 +103,15 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::post('sales/{sale}/void', [SaleController::class, 'void'])
             ->middleware('permission:'.Permission::SalesVoid->value)
             ->name('sales.void');
+
+        // Proformas: anyone logged in can view them; quoting, editing, cancelling and converting need sales.create.
+        Route::apiResource('proformas', ProformaController::class)->only(['index', 'show']);
+        Route::middleware('permission:'.Permission::SalesCreate->value)->group(function () {
+            Route::post('proformas/preview', [ProformaController::class, 'preview'])->name('proformas.preview');
+            Route::post('proformas', [ProformaController::class, 'store'])->name('proformas.store');
+            Route::patch('proformas/{proforma}', [ProformaController::class, 'update'])->name('proformas.update');
+            Route::post('proformas/{proforma}/cancel', [ProformaController::class, 'cancel'])->name('proformas.cancel');
+        });
 
         // Later payments against a purchase or sale (purchases also need purchases.create).
         Route::post('payments', PaymentController::class)
