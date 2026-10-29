@@ -38,6 +38,11 @@ Route::prefix('v1')->name('v1.')->group(function () {
         ->middleware('throttle:login')
         ->name('auth.session.store');
 
+    // The login page shows the shop's name and logo before anyone is logged in.
+    Route::get('shop/brand', [ShopController::class, 'brand'])
+        ->middleware('throttle:60,1')
+        ->name('shop.brand');
+
     Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::post('auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
         Route::delete('auth/session', [AuthController::class, 'endSession'])->name('auth.session.destroy');

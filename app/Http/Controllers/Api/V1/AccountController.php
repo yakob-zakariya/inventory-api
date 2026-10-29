@@ -8,8 +8,10 @@ use App\Http\Requests\Api\V1\StoreAccountRequest;
 use App\Http\Requests\Api\V1\UpdateAccountRequest;
 use App\Http\Resources\AccountResource;
 use App\Models\Account;
+use App\Services\MoneyLedger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Accounts have no delete: deactivate them with `is_active = false`.
@@ -40,9 +42,24 @@ class AccountController extends Controller
         return new AccountResource($account);
     }
 
-    public function update(UpdateAccountRequest $request, Account $account): AccountResource
+    /**
+     * Edit the account. Deactivating it is refused while its balance is not zero.
+     */
+    public function update(UpdateAccountRequest $request, Account $account, MoneyLedger $ledger): AccountResource
     {
-        $account->update($request->validated());
+        $data = $request->validated();
+        $deactivating = $request->has('is_active') && ! $request->boolean('is_active') && $account->is_active;
+
+        $account = DB::transaction(function () use ($account, $data, $deactivating, $ledger) {
+            if ($deactivating) {
+                $account = $ledger->deactivate($account);
+                unset($data['is_active']);
+            }
+
+            $account->update($data);
+
+            return $account;
+        });
 
         return new AccountResource($account);
     }

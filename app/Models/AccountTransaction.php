@@ -63,6 +63,16 @@ class AccountTransaction extends Model
     }
 
     /**
+     * The entry this reversal cancels.
+     *
+     * @return BelongsTo<AccountTransaction, $this>
+     */
+    public function reverses(): BelongsTo
+    {
+        return $this->belongsTo(AccountTransaction::class, 'reverses_transaction_id');
+    }
+
+    /**
      * The reversal row that cancelled this entry, if any.
      *
      * @return HasOne<AccountTransaction, $this>

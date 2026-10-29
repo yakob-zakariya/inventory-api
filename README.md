@@ -1,58 +1,42 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Inventory API
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A JSON API for a small trading shop: products and stock, purchases from suppliers, sales to customers (on credit too), proformas, and the money moving through the shop's cash, bank and mobile-money accounts. Laravel 13, MySQL in production.
 
-## About Laravel
+Stock and money are append-only ledgers. Stock, balances and what each customer owes are always calculated from them, and mistakes are corrected by voiding or reversing with a reason, never by editing. The full design and the reasons behind it are in [docs/design.md](docs/design.md).
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+The web app (React) lives in its own repository and logs in with cookie sessions; mobile apps and Postman use tokens.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Run it locally
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
-
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+Needs PHP 8.5 with the `gd`, `intl`, `zip` and `pdo_sqlite` extensions, and Composer.
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+composer install
+cp .env.example .env
+php artisan key:generate
+touch database/database.sqlite
+php artisan migrate --seed          # demo data: owner@example.com and staff@example.com, password "password"
+php artisan storage:link
+php artisan serve                   # serves http://localhost:8000
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+## Commands you will use
 
-## Contributing
+| Command | What it does |
+| --- | --- |
+| `php artisan test --compact` | Run the tests. |
+| `docker compose up -d mysql-test` then `php artisan test --compact --group=mysql` | Run the concurrency tests on a real MySQL. |
+| `vendor/bin/pint` | Format the code. |
+| `php artisan migrate:fresh --seed` | Reset the local database to the demo data. |
+| `php artisan inventory:verify` | Recalculate everything from the ledgers and list any inconsistency. |
+| `php artisan inventory:create-owner` | Create a user with every permission (the first user on a new install). |
+| `php artisan backup:run` / `backup:list` | Make a backup now / see the backups and whether they are healthy. |
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Documentation
 
-## Code of Conduct
+- [docs/design.md](docs/design.md): data model, business rules, permissions, API overview.
+- [docs/deployment.md](docs/deployment.md): setting up the server, updating, and restoring a backup.
+- API reference: run `php artisan serve` and open <http://localhost:8000/docs/api> (local only).
+- [docs/postman](docs/postman): a Postman collection that walks through every feature on the demo data.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Every push runs the code style check and both test suites on GitHub Actions.

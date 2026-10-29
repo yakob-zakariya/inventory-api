@@ -183,6 +183,29 @@ class MoneyLedger
         ))->all();
     }
 
+    /**
+     * Deactivate an account, refused while it still holds money: an inactive account takes
+     * no entries, so its balance could never be moved out. Locks the account, so a payment
+     * cannot land between the balance check and the change.
+     *
+     * @throws ConflictException when the balance is not zero
+     */
+    public function deactivate(Account $account): Account
+    {
+        $account = $this->lockAccounts([$account->id])->first();
+        $balanceCents = $account->balanceCents();
+
+        if ($balanceCents !== 0) {
+            $balance = Money::fromCents($balanceCents);
+
+            throw new ConflictException("{$account->name} has a balance of {$balance}. Transfer it to another account first.");
+        }
+
+        $account->update(['is_active' => false]);
+
+        return $account;
+    }
+
     private function ensureInTransaction(): void
     {
         if (DB::transactionLevel() === 0) {
