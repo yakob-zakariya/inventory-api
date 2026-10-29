@@ -114,3 +114,26 @@ it('needs settings.manage to change the logo', function () {
         ->assertForbidden();
     $this->deleteJson('/api/v1/shop/logo')->assertForbidden();
 });
+
+it('shows only the name and logo before login', function () {
+    Storage::fake('public');
+    ShopSetting::current()->forceFill(['name' => 'Horizon Metals', 'phone' => '0911 223344', 'tin' => '0012345678',
+        'logo_path' => 'shop/logo.png'])->save();
+
+    $this->getJson('/api/v1/shop/brand')->assertOk()->assertExactJson(['data' => [
+        'name' => 'Horizon Metals',
+        'logo_url' => Storage::disk('public')->url('shop/logo.png'),
+    ]]);
+});
+
+it('shows a null logo before login when there is none', function () {
+    $this->getJson('/api/v1/shop/brand')->assertOk()->assertJsonPath('data.logo_url', null);
+});
+
+it('limits how often the brand can be fetched', function () {
+    foreach (range(1, 60) as $attempt) {
+        $this->getJson('/api/v1/shop/brand')->assertOk();
+    }
+
+    $this->getJson('/api/v1/shop/brand')->assertTooManyRequests();
+});
