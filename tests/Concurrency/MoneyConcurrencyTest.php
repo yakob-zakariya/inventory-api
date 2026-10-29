@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\AccountTransactionType;
 use App\Models\Account;
 use App\Models\AccountTransaction;
 use App\Models\Customer;
@@ -7,8 +8,10 @@ use App\Models\Product;
 use App\Models\Sale;
 use App\Models\StockMovement;
 use App\Services\BusinessSummary;
+use App\Services\MoneyLedger;
 use App\Services\PaymentRecorder;
 use App\Services\SaleRecorder;
+use Illuminate\Support\Facades\DB;
 
 it('lets only one of two racing payments use up the same balance due', function () {
     $product = Product::factory()->create(['selling_price' => '100.00']);
@@ -46,4 +49,29 @@ it('calculates the business summary in MySQL as it does in SQLite', function () 
     expect($summary->inventoryAtCostCents)->toBe(30)
         ->and($summary->inventoryAtSellingPriceCents)->toBe(90)
         ->and($summary->netWorthCents())->toBe(50);
+});
+
+it('never leaves money in an account deactivated while a deposit arrives', function () {
+    $cash = Account::factory()->create(['name' => 'Cash', 'opening_balance' => '0.00']);
+
+    $deactivate = function () use ($cash) {
+        // Pause after the account is locked, before its balance is read.
+        Account::retrieved(fn () => usleep(300_000));
+        DB::transaction(fn () => app(MoneyLedger::class)->deactivate($cash));
+
+        return 'deactivated';
+    };
+    $deposit = function () use ($cash) {
+        usleep(100_000);
+        DB::transaction(fn () => app(MoneyLedger::class)->record($cash, AccountTransactionType::OwnerDeposit, 5000, now()));
+
+        return 'deposited';
+    };
+
+    $outcomes = collect(inParallel([$deactivate, $deposit]))->sort()->values()->all();
+    $cash->refresh();
+
+    expect($outcomes)->toBe(['BusinessRuleException: The account "Cash" is inactive.', 'deactivated'])
+        ->and($cash->is_active)->toBeFalse()
+        ->and($cash->balanceCents())->toBe(0);
 });

@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Account;
+use App\Models\AccountTransaction;
 
 it('lets the owner create an account', function () {
     $owner = actingAsOwner();
@@ -32,7 +33,7 @@ it('accepts a negative opening balance for an overdrawn account', function () {
 
 it('lets the owner rename and deactivate an account', function () {
     actingAsOwner();
-    $account = Account::factory()->create();
+    $account = Account::factory()->create(['opening_balance' => '0.00']);
 
     $this->patchJson("/api/v1/accounts/{$account->id}", ['name' => 'Old bank', 'is_active' => false])
         ->assertOk()
@@ -99,3 +100,41 @@ it('validates a new account', function (array $payload, string $field) {
     'unknown type' => [['name' => 'A', 'type' => 'crypto'], 'type'],
     'three decimals' => [['name' => 'A', 'type' => 'cash', 'opening_balance' => '1.005'], 'opening_balance'],
 ]);
+
+it('refuses to deactivate an account that holds money', function () {
+    actingAsOwner();
+    $account = Account::factory()->create(['name' => 'Cash', 'opening_balance' => '1000.00']);
+    AccountTransaction::factory()->for($account)->create(['amount' => '200.00']);
+
+    $this->patchJson("/api/v1/accounts/{$account->id}", ['name' => 'Old cash', 'is_active' => false])
+        ->assertConflict()
+        ->assertJsonPath('message', 'Cash has a balance of 1200.00. Transfer it to another account first.');
+
+    expect($account->fresh())->is_active->toBeTrue()->name->toBe('Cash');
+});
+
+it('refuses to deactivate an overdrawn account too', function () {
+    actingAsOwner();
+    $account = Account::factory()->create(['name' => 'Bank', 'opening_balance' => '-50.00']);
+
+    $this->patchJson("/api/v1/accounts/{$account->id}", ['is_active' => '0'])
+        ->assertConflict()
+        ->assertJsonPath('message', 'Bank has a balance of -50.00. Transfer it to another account first.');
+});
+
+it('deactivates an account once its money is moved out', function () {
+    actingAsOwner();
+    $account = Account::factory()->create(['opening_balance' => '300.00']);
+    AccountTransaction::factory()->for($account)->create(['amount' => '-300.00']);
+
+    $this->patchJson("/api/v1/accounts/{$account->id}", ['is_active' => false])
+        ->assertOk()->assertJsonPath('data.is_active', false);
+});
+
+it('always allows reactivating an account', function () {
+    actingAsOwner();
+    $account = Account::factory()->create(['opening_balance' => '0.00', 'is_active' => false]);
+
+    $this->patchJson("/api/v1/accounts/{$account->id}", ['is_active' => true])
+        ->assertOk()->assertJsonPath('data.is_active', true);
+});
