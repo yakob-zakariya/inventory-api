@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\RoleController;
 use App\Http\Controllers\Api\V1\SaleController;
 use App\Http\Controllers\Api\V1\ShopController;
+use App\Http\Controllers\Api\V1\ShopLogoController;
 use App\Http\Controllers\Api\V1\StockAdjustmentController;
 use App\Http\Controllers\Api\V1\StockMovementController;
 use App\Http\Controllers\Api\V1\SupplierController;
@@ -41,9 +42,11 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::delete('auth/session', [AuthController::class, 'endSession'])->name('auth.session.destroy');
         Route::get('auth/me', [AuthController::class, 'me'])->name('auth.me');
         Route::get('shop', [ShopController::class, 'show'])->name('shop.show');
-        Route::patch('shop', [ShopController::class, 'update'])
-            ->middleware('permission:'.Permission::SettingsManage->value)
-            ->name('shop.update');
+        Route::middleware('permission:'.Permission::SettingsManage->value)->group(function () {
+            Route::patch('shop', [ShopController::class, 'update'])->name('shop.update');
+            Route::post('shop/logo', [ShopLogoController::class, 'store'])->name('shop.logo.store');
+            Route::delete('shop/logo', [ShopLogoController::class, 'destroy'])->name('shop.logo.destroy');
+        });
         Route::post('auth/password', [AuthController::class, 'changePassword'])->name('auth.password');
 
         Route::middleware('permission:'.Permission::UsersManage->value)->group(function () {
