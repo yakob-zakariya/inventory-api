@@ -38,6 +38,7 @@ class SaleResource extends JsonResource
             'voided_by' => $this->voided_by,
             'voided_by_user' => $this->voider?->only(['id', 'name']),
             'void_reason' => $this->void_reason,
+            'proforma' => $this->whenLoaded('proforma', fn () => $this->proforma?->only(['id', 'number'])),
             'items' => SaleItemResource::collection($this->whenLoaded('items')),
             'payments' => $this->whenLoaded('payments', fn () => $this->payments->map(
                 fn ($payment) => new DocumentPaymentResource($payment, Sale::paymentSign()),

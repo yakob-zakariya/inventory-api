@@ -84,6 +84,14 @@
     {
       "key": "cashierToken",
       "value": ""
+    },
+    {
+      "key": "proformaId",
+      "value": ""
+    },
+    {
+      "key": "lostProformaId",
+      "value": ""
     }
   ],
   "item": [
@@ -6925,6 +6933,857 @@
                   "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
                   "const j = pm.response.json();",
                   "pm.test(\"data.user.roles = [\\\"Cashier\\\"]\", () => pm.expect(j[\"data\"][\"user\"][\"roles\"]).to.eql([\"Cashier\"]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Proformas",
+      "description": "Quote, edit, convert to a sale, cancel. A proforma never touches stock or money until it is converted.",
+      "item": [
+        {
+          "name": "Owner fills in the shop details",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shop",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shop"
+              ]
+            },
+            "description": "SHOP_* in .env are only the starting values.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Demo Building Supplies\",\n  \"address\": \"Bole, Addis Ababa\",\n  \"phone\": \"0911 000000\",\n  \"tin\": \"0012345678\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.phone = \\\"0911 000000\\\"\", () => pm.expect(j[\"data\"][\"phone\"]).to.eql(\"0911 000000\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Staff cannot change them",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shop",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shop"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"0900 000000\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "The currency is fixed",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shop",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shop"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currency\": \"USD\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 422\", () => pm.response.to.have.status(422));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"errors.currency.0 = \\\"The currency is set when the system is installed and cannot be changed here.\\\"\", () => pm.expect(j[\"errors\"][\"currency\"][0]).to.eql(\"The currency is set when the system is installed and cannot be changed here.\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Shop details for the printout",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shop",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shop"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.phone = \\\"0911 000000\\\"\", () => pm.expect(j[\"data\"][\"phone\"]).to.eql(\"0911 000000\"));",
+                  "pm.test(\"data.currency = \\\"ETB\\\"\", () => pm.expect(j[\"data\"][\"currency\"]).to.eql(\"ETB\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Preview a quote",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/proformas/preview",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "proformas",
+                "preview"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"product_id\": 1,\n      \"quantity\": 2,\n      \"unit_price\": \"700.00\"\n    },\n    {\n      \"product_id\": 3,\n      \"quantity\": 1,\n      \"unit_price\": \"1000.00\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.items.0.line_total = \\\"1400.00\\\"\", () => pm.expect(j[\"data\"][\"items\"][0][\"line_total\"]).to.eql(\"1400.00\"));",
+                  "pm.test(\"data.total_amount = \\\"2400.00\\\"\", () => pm.expect(j[\"data\"][\"total_amount\"]).to.eql(\"2400.00\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Quote for someone not yet a customer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/proformas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "proformas"
+              ]
+            },
+            "description": "valid_until defaults to 7 days after the proforma date.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_name\": \"Hanna Construction\",\n  \"customer_phone\": \"0911 223344\",\n  \"items\": [\n    {\n      \"product_id\": 1,\n      \"quantity\": 2,\n      \"unit_price\": \"700.00\"\n    },\n    {\n      \"product_id\": 3,\n      \"quantity\": 1,\n      \"unit_price\": \"1000.00\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.number = \\\"PRF-000001\\\"\", () => pm.expect(j[\"data\"][\"number\"]).to.eql(\"PRF-000001\"));",
+                  "pm.test(\"data.status = \\\"open\\\"\", () => pm.expect(j[\"data\"][\"status\"]).to.eql(\"open\"));",
+                  "pm.test(\"data.total_amount = \\\"2400.00\\\"\", () => pm.expect(j[\"data\"][\"total_amount\"]).to.eql(\"2400.00\"));",
+                  "pm.test(\"data.customer = null\", () => pm.expect(j[\"data\"][\"customer\"]).to.eql(null));",
+                  "pm.collectionVariables.set(\"proformaId\", j[\"data\"][\"id\"]);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "The customer wants 2 tins of paint",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/proformas/{{proformaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "proformas",
+                "{{proformaId}}"
+              ]
+            },
+            "description": "Items replace the whole list; the total is recalculated.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"product_id\": 1,\n      \"quantity\": 2,\n      \"unit_price\": \"700.00\"\n    },\n    {\n      \"product_id\": 3,\n      \"quantity\": 2,\n      \"unit_price\": \"1000.00\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.total_amount = \\\"3400.00\\\"\", () => pm.expect(j[\"data\"][\"total_amount\"]).to.eql(\"3400.00\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Converting a typed-in customer on credit is refused",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/proformas/{{proformaId}}/convert",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "proformas",
+                "{{proformaId}}",
+                "convert"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"product_id\": 1,\n      \"quantity\": 1\n    },\n    {\n      \"product_id\": 3,\n      \"quantity\": 2\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 422\", () => pm.response.to.have.status(422));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"message = \\\"A customer is required for a sale that is not fully paid.\\\"\", () => pm.expect(j[\"message\"]).to.eql(\"A customer is required for a sale that is not fully paid.\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "They take 1 bag less and pay in full",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/proformas/{{proformaId}}/convert",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "proformas",
+                "{{proformaId}}",
+                "convert"
+              ]
+            },
+            "description": "Quoted prices are kept; stock and payments follow the normal sale rules.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"product_id\": 1,\n      \"quantity\": 1\n    },\n    {\n      \"product_id\": 3,\n      \"quantity\": 2\n    }\n  ],\n  \"payments\": [\n    {\n      \"account_id\": 1,\n      \"amount\": \"2700.00\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.total_amount = \\\"2700.00\\\"\", () => pm.expect(j[\"data\"][\"total_amount\"]).to.eql(\"2700.00\"));",
+                  "pm.test(\"data.payment_status = \\\"paid\\\"\", () => pm.expect(j[\"data\"][\"payment_status\"]).to.eql(\"paid\"));",
+                  "pm.test(\"data.items.0.unit_price = \\\"700.00\\\"\", () => pm.expect(j[\"data\"][\"items\"][0][\"unit_price\"]).to.eql(\"700.00\"));",
+                  "pm.test(\"data.proforma.number = \\\"PRF-000001\\\"\", () => pm.expect(j[\"data\"][\"proforma\"][\"number\"]).to.eql(\"PRF-000001\"));",
+                  "pm.test(\"data.note = \\\"From PRF-000001 (Hanna Construction)\\\"\", () => pm.expect(j[\"data\"][\"note\"]).to.eql(\"From PRF-000001 (Hanna Construction)\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "It cannot be converted twice",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/proformas/{{proformaId}}/convert",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "proformas",
+                "{{proformaId}}",
+                "convert"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 409\", () => pm.response.to.have.status(409));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"message = \\\"PRF-000001 was already converted to a sale.\\\"\", () => pm.expect(j[\"message\"]).to.eql(\"PRF-000001 was already converted to a sale.\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "The proforma links to its sale",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/proformas/{{proformaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "proformas",
+                "{{proformaId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.status = \\\"converted\\\"\", () => pm.expect(j[\"data\"][\"status\"]).to.eql(\"converted\"));",
+                  "pm.test(\"data.sale.number = \\\"SAL-000007\\\"\", () => pm.expect(j[\"data\"][\"sale\"][\"number\"]).to.eql(\"SAL-000007\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A quote that was lost",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/proformas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "proformas"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_id\": 1,\n  \"items\": [\n    {\n      \"product_id\": 2,\n      \"quantity\": 10\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 201\", () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.collectionVariables.set(\"lostProformaId\", j[\"data\"][\"id\"]);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cancel it with a reason",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/proformas/{{lostProformaId}}/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "proformas",
+                "{{lostProformaId}}",
+                "cancel"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Customer bought elsewhere\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.status = \\\"cancelled\\\"\", () => pm.expect(j[\"data\"][\"status\"]).to.eql(\"cancelled\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A cancelled proforma cannot change",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/proformas/{{lostProformaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "proformas",
+                "{{lostProformaId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \"x\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 409\", () => pm.response.to.have.status(409));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"message = \\\"PRF-000002 is cancelled.\\\"\", () => pm.expect(j[\"message\"]).to.eql(\"PRF-000002 is cancelled.\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Converted proformas",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/proformas?status=converted",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "proformas"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "converted"
+                }
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.0.number = \\\"PRF-000001\\\"\", () => pm.expect(j[\"data\"][0][\"number\"]).to.eql(\"PRF-000001\"));"
                 ]
               }
             }

@@ -18,6 +18,7 @@ enum Permission: string
     case CustomersManage = 'customers.manage';
     case ReportsView = 'reports.view';
     case UsersManage = 'users.manage';
+    case SettingsManage = 'settings.manage';
 
     /**
      * What the permission allows, as shown in the role editor.
@@ -39,6 +40,7 @@ enum Permission: string
             self::CustomersManage => 'Create, edit and delete customers',
             self::ReportsView => 'See reports, balances, costs and the money ledger',
             self::UsersManage => 'Manage users and roles',
+            self::SettingsManage => 'Edit the shop name and contact details printed on documents',
         };
     }
 
@@ -53,7 +55,7 @@ enum Permission: string
             self::SalesCreate, self::SalesVoid, self::CustomersManage => 'Sales',
             self::PaymentsRecord, self::PaymentsVoid, self::ExpensesRecord, self::AccountsManage => 'Money',
             self::ReportsView => 'Reports',
-            self::UsersManage => 'Administration',
+            self::UsersManage, self::SettingsManage => 'Administration',
         };
     }
 

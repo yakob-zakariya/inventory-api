@@ -12,10 +12,12 @@ use App\Http\Controllers\Api\V1\OwnerEntryController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\PermissionController;
 use App\Http\Controllers\Api\V1\ProductController;
+use App\Http\Controllers\Api\V1\ProformaController;
 use App\Http\Controllers\Api\V1\PurchaseController;
 use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\RoleController;
 use App\Http\Controllers\Api\V1\SaleController;
+use App\Http\Controllers\Api\V1\ShopController;
 use App\Http\Controllers\Api\V1\StockAdjustmentController;
 use App\Http\Controllers\Api\V1\StockMovementController;
 use App\Http\Controllers\Api\V1\SupplierController;
@@ -37,6 +39,10 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::post('auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
         Route::delete('auth/session', [AuthController::class, 'endSession'])->name('auth.session.destroy');
         Route::get('auth/me', [AuthController::class, 'me'])->name('auth.me');
+        Route::get('shop', [ShopController::class, 'show'])->name('shop.show');
+        Route::patch('shop', [ShopController::class, 'update'])
+            ->middleware('permission:'.Permission::SettingsManage->value)
+            ->name('shop.update');
         Route::post('auth/password', [AuthController::class, 'changePassword'])->name('auth.password');
 
         Route::middleware('permission:'.Permission::UsersManage->value)->group(function () {
@@ -102,6 +108,16 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::post('sales/{sale}/void', [SaleController::class, 'void'])
             ->middleware('permission:'.Permission::SalesVoid->value)
             ->name('sales.void');
+
+        // Proformas: anyone logged in can view them; quoting, editing, cancelling and converting need sales.create.
+        Route::apiResource('proformas', ProformaController::class)->only(['index', 'show']);
+        Route::middleware('permission:'.Permission::SalesCreate->value)->group(function () {
+            Route::post('proformas/preview', [ProformaController::class, 'preview'])->name('proformas.preview');
+            Route::post('proformas', [ProformaController::class, 'store'])->name('proformas.store');
+            Route::patch('proformas/{proforma}', [ProformaController::class, 'update'])->name('proformas.update');
+            Route::post('proformas/{proforma}/cancel', [ProformaController::class, 'cancel'])->name('proformas.cancel');
+            Route::post('proformas/{proforma}/convert', [ProformaController::class, 'convert'])->name('proformas.convert');
+        });
 
         // Later payments against a purchase or sale (purchases also need purchases.create).
         Route::post('payments', PaymentController::class)

@@ -69,6 +69,7 @@ Every master data table also has `created_by` (nullable, the user who created th
 - `customers`: name, phone (unique when present), address, deleted_at.
 - `products`: category_id, sku (unique), name, description, unit (text label such as "bag"), cost_price, selling_price, reorder_level (integer), deleted_at.
 - `accounts`: name (unique), type (cash, bank, mobile_money), opening_balance, is_active. Accounts are never deleted, only deactivated. `opening_balance` may be negative (an account that starts overdrawn) and is fixed once the account is created; a wrong opening balance is corrected with an `adjustment` transaction.
+- `shop_settings`: one row with name, address, phone, email, tin, printed on documents. The migration creates it from the `SHOP_*` environment values; after that the shop edits it in the app. The currency is not stored: it comes from `SHOP_CURRENCY` and is fixed at installation, because amounts are never converted.
 
 ### Documents
 - `purchases`: number (unique, for example PUR-000123), supplier_id, invoice_number, purchase_date, total_amount, note, status (active, voided), voided_at, voided_by, void_reason, created_by.
@@ -76,6 +77,11 @@ Every master data table also has `created_by` (nullable, the user who created th
 - `sales`: number (SAL-000123), customer_id (nullable), sale_date, total_amount, note, status, voided_at, voided_by, void_reason, created_by.
 - `sale_items`: sale_id, product_id, quantity, unit_price, unit_cost (snapshot of the product's cost at the time of sale).
 - `document_sequences`: type (unique), last_number. One row per document type (purchase, sale). To number a new document, lock its row inside the same transaction, add 1 to `last_number`, and format the result (for example SAL-000204). A rollback also rolls back the counter, so numbers have no gaps.
+
+### Proformas (quotes)
+- `proformas`: number (PRF-000123), customer_id (nullable) or customer_name and customer_phone for someone not yet a customer, proforma_date, valid_until, total_amount (recalculated from the items on every change), note, status (open, converted, cancelled), sale_id and converted_at once converted, cancelled_at, cancelled_by, cancel_reason, created_by.
+- `proforma_items`: proforma_id, product_id, quantity, unit_price (the quoted price; no cost, which is copied when the sale is made).
+- A proforma never touches stock or money. "Expired" is derived: open and past valid_until.
 
 ### Ledgers (append-only)
 - `stock_movements`: product_id, type (purchase, sale, adjustment, reversal), quantity (signed: positive in, negative out), reference (polymorphic, nullable: purchase or sale), note, created_by.
@@ -140,6 +146,9 @@ If reports ever become slow, cached columns may be added, but only alongside the
 12. Soft-deleted products cannot be used on new documents.
 13. A category cannot be deleted while any product (including soft-deleted ones) belongs to it (409). Deleting a product is a soft delete, refused with 409 while the product still has stock on hand (adjust it to zero first).
 
+14. Proformas: made out to a registered customer or a typed name. `valid_until` (default 7 days) is not before the proforma date. No stock check while quoting. Editable (items replace the list, the total is recalculated) and cancellable (reason required) only while open and not expired; otherwise 409.
+15. Converting a proforma creates one sale through the normal sale rules (stock, walk-in must pay in full, payments within the total) at the quoted prices, with costs copied at that moment. Quantities may be lowered and items left out; adding items or raising prices is refused. An expired proforma cannot be converted (422); a converted or cancelled one returns 409. Locks: the proforma and its items first (with locking reads, so MySQL's snapshot is not fixed before the stock check), then the products, the sequence and the accounts as for any sale. Nothing locks a proforma after products, so this order cannot deadlock. The proforma keeps its link to the sale even if the sale is voided later.
+
 ## 9. Core flows
 
 **Purchase with partial payment.** One request creates the purchase, its items, stock movements (+quantity per item), and optional payment rows, in one transaction. The server computes the total; the client never sends it.
@@ -178,6 +187,7 @@ Prefix `/api/v1`. All routes except login need a Sanctum token. Permissions are 
 - Edit: only the note (sales) or the note and invoice number (purchases), also on voided documents; any other field is a 422.
 - Document lists: `search` (number, customer or supplier name, purchase invoice number) and `payment_status=unpaid|partial|paid` (active documents only), besides party, status and dates.
 - Viewing: purchases need `purchases.create`. Sales are visible to any logged-in user, but sale items show `unit_cost` only to users with `reports.view`.
+- Proformas: `GET /proformas` (search, status including `expired`, customer, dates), `GET /proformas/{id}`, `POST /proformas`, `POST /proformas/preview`, `PATCH /proformas/{id}`, `POST /proformas/{id}/cancel`, `POST /proformas/{id}/convert`. Viewing is open to any logged-in user like sales; changes need `sales.create`. Printing is done by the client with `GET /shop` (shop name, address, phone, email, TIN and currency); `PATCH /shop` changes them with `settings.manage`, except the currency (422).
 - Money: `GET /account-transactions`, `POST /payments` (against a document), `POST /expenses`, `POST /transfers`, `POST /owner-entries`, `POST /account-adjustments`, `POST /account-transactions/{id}/reverse`.
 - Reports: stock levels and low stock, supplier payables, customer receivables, account balances, cash flow, profit.
 - `GET /reports/summary` (`reports.view`): account balances, inventory value, receivables, payables and net worth, as of now.
@@ -195,7 +205,7 @@ Prefix `/api/v1`. All routes except login need a Sanctum token. Permissions are 
 
 ## 11. Permissions (v1 proposal)
 
-Named permissions: `products.manage`, `stock.adjust`, `purchases.create`, `purchases.void`, `sales.create`, `sales.void`, `payments.record`, `payments.void`, `expenses.record`, `accounts.manage`, `suppliers.manage`, `customers.manage`, `reports.view`, `users.manage`.
+Named permissions: `products.manage`, `stock.adjust`, `purchases.create`, `purchases.void`, `sales.create`, `sales.void`, `payments.record`, `payments.void`, `expenses.record`, `accounts.manage`, `suppliers.manage`, `customers.manage`, `reports.view`, `users.manage`, `settings.manage` (edit the shop details, `PATCH /shop`).
 
 - **owner:** all permissions.
 - **staff (for shops with more than one user):** view master data, `customers.manage` (to register credit customers), `sales.create`, `payments.record` for sales. No voiding, purchases, expenses, accounts, or reports.
