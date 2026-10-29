@@ -234,7 +234,7 @@ Custom roles and user management (`users.manage`):
 ## 12. Operations and quality
 
 - **Tests, written in every phase:** stock rules and concurrency, totals and cents arithmetic, payment status, voiding rules, permissions, validation. The regular suite runs on in-memory SQLite. Concurrency tests live in `tests/Concurrency` (Pest group `mysql`) and run against a throwaway MySQL from `docker-compose.yml`, with committed data and real parallel processes; they are skipped when that database is not running.
-- **Verify command** (`php artisan inventory:verify`): recalculates everything from the ledgers and checks that document totals equal the sum of their items, active documents have matching movements and payments within limits, voided documents net to zero, transfer groups sum to zero, and no product has negative stock.
+- **Verify command** (`php artisan inventory:verify`): recalculates everything from the ledgers and checks that document totals equal the sum of their items, active documents have matching movements and payments within limits, voided documents net to zero, transfer groups sum to zero, each reversal cancels exactly its entry, inactive accounts hold no money, and no product has negative stock. It lists every problem and exits with 1 if there is any; it runs daily and after every deploy.
 - **Hosting:** a small cloud server (PHP, MySQL or PostgreSQL, web server, HTTPS) with `APP_DEBUG=false`, a queue-free setup to start with, and a documented update procedure.
 - **Backups:** automated database backups to a separate location, with a tested restore, from the first real use.
 - **API documentation:** generated from the code (for example Scramble).
