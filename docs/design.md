@@ -235,11 +235,11 @@ Custom roles and user management (`users.manage`):
 
 - **Tests, written in every phase:** stock rules and concurrency, totals and cents arithmetic, payment status, voiding rules, permissions, validation. The regular suite runs on in-memory SQLite. Concurrency tests live in `tests/Concurrency` (Pest group `mysql`) and run against a throwaway MySQL from `docker-compose.yml`, with committed data and real parallel processes; they are skipped when that database is not running.
 - **Verify command** (`php artisan inventory:verify`): recalculates everything from the ledgers and checks that document totals equal the sum of their items, active documents have matching movements and payments within limits, voided documents net to zero, transfer groups sum to zero, each reversal cancels exactly its entry, inactive accounts hold no money, and no product has negative stock. It lists every problem and exits with 1 if there is any; it runs daily and after every deploy.
-- **Hosting:** a small cloud server (PHP, MySQL or PostgreSQL, web server, HTTPS) with `APP_DEBUG=false`, a queue-free setup to start with, and a documented update procedure.
-- **Backups:** automated database backups to a separate location, with a tested restore, from the first real use.
+- **Hosting:** one small Ubuntu server with Nginx, PHP-FPM, MySQL and HTTPS, serving the API (`api.` subdomain) and the web app's static build (`app.` subdomain), `APP_DEBUG=false`, no queue worker. Setup, updates (`deploy/deploy.sh`) and restore are in `docs/deployment.md`.
+- **Backups:** spatie/laravel-backup, nightly: the database and `storage/app/public`, encrypted, to an S3-compatible bucket, with retention, a staleness monitor and failure emails. The restore was tested (see `docs/deployment.md`).
 - **API documentation:** generated from the code (for example Scramble).
 - **Seeders and factories** for realistic demo data. A clean `.env.example`. A README that links to this document.
-- **CI:** a pipeline that runs the tests on every push.
+- **CI:** GitHub Actions on every push: Pint, the suite on SQLite, and the concurrency tests on a MySQL service.
 
 ## 13. Build plan
 
