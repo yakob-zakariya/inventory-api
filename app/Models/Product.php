@@ -90,6 +90,17 @@ class Product extends Model
     }
 
     /**
+     * Only products with stock above zero.
+     *
+     * @param  Builder<self>  $query
+     */
+    #[Scope]
+    protected function available(Builder $query): void
+    {
+        $query->where(static::stockSubquery(), '>', 0);
+    }
+
+    /**
      * Sort by `name` (default), `stock` (lowest first) or `-stock` (highest first), then by name.
      *
      * @param  Builder<self>  $query

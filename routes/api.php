@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\ExpenseController;
 use App\Http\Controllers\Api\V1\OwnerEntryController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\PermissionController;
+use App\Http\Controllers\Api\V1\PriceListController;
 use App\Http\Controllers\Api\V1\ProductController;
 use App\Http\Controllers\Api\V1\ProductImageController;
 use App\Http\Controllers\Api\V1\ProformaController;
@@ -61,6 +62,7 @@ Route::prefix('v1')->name('v1.')->group(function () {
         // Master data: any logged-in user can read, writes need the matching permission.
         Route::apiResource('categories', CategoryController::class)->only(['index', 'show']);
         Route::apiResource('products', ProductController::class)->only(['index', 'show']);
+        Route::get('price-list', PriceListController::class)->name('price-list');
         Route::apiResource('suppliers', SupplierController::class)->only(['index', 'show']);
         Route::apiResource('customers', CustomerController::class)->only(['index', 'show']);
         Route::apiResource('accounts', AccountController::class)->only(['index', 'show']);
