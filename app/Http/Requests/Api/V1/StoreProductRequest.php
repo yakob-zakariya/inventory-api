@@ -36,6 +36,7 @@ class StoreProductRequest extends FormRequest
             'unit' => ['required', 'string', 'max:32'],
             'cost_price' => ['required', ...Money::rules()],
             'selling_price' => ['required', ...Money::rules()],
+            'additional_cost' => ['sometimes', ...Money::rules()],
             'reorder_level' => ['sometimes', 'integer', 'min:0', 'max:1000000'],
         ];
     }

@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
 
-#[Fillable(['category_id', 'sku', 'name', 'description', 'unit', 'cost_price', 'selling_price', 'reorder_level'])]
+#[Fillable(['category_id', 'sku', 'name', 'description', 'unit', 'cost_price', 'selling_price', 'additional_cost', 'reorder_level'])]
 class Product extends Model
 {
     /** @use HasFactory<ProductFactory> */
@@ -30,6 +30,7 @@ class Product extends Model
      */
     protected $attributes = [
         'reorder_level' => 0,
+        'additional_cost' => '0.00',
     ];
 
     /**
@@ -42,6 +43,7 @@ class Product extends Model
         return [
             'cost_price' => 'decimal:2',
             'selling_price' => 'decimal:2',
+            'additional_cost' => 'decimal:2',
             'reorder_level' => 'integer',
         ];
     }

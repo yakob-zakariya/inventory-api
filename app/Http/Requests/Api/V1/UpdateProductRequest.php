@@ -36,6 +36,7 @@ class UpdateProductRequest extends FormRequest
             'unit' => ['sometimes', 'required', 'string', 'max:32'],
             'cost_price' => ['sometimes', 'required', ...Money::rules()],
             'selling_price' => ['sometimes', 'required', ...Money::rules()],
+            'additional_cost' => ['sometimes', 'required', ...Money::rules()],
             'reorder_level' => ['sometimes', 'integer', 'min:0', 'max:1000000'],
         ];
     }

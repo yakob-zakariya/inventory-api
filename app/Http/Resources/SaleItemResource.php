@@ -32,7 +32,7 @@ class SaleItemResource extends JsonResource
             'quantity' => $this->quantity,
             'unit_price' => $this->unit_price,
             'unit_cost' => $this->when(
-                (bool) $request->user()?->can(Permission::ReportsView->value),
+                (bool) $request->user()?->can(Permission::CostsView->value),
                 fn () => $this->unit_cost,
             ),
             'line_total' => Money::fromCents($this->lineTotalCents()),
