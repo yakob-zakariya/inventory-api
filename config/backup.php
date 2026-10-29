@@ -236,7 +236,8 @@ return [
 
         'mail' => [
             // Who hears about failed or missing backups (and a failed inventory:verify).
-            'to' => env('BACKUP_MAIL_TO', env('MAIL_FROM_ADDRESS', 'hello@example.com')),
+            // An empty BACKUP_MAIL_TO (as in .env.example) falls back to the sender address.
+            'to' => env('BACKUP_MAIL_TO') ?: env('MAIL_FROM_ADDRESS', 'hello@example.com'),
 
             'from' => [
                 'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
