@@ -184,3 +184,21 @@ it('refuses to delete a category that has products, even deleted ones', function
 
     expect(Category::find($product->category_id))->not->toBeNull();
 });
+
+it('saves the additional cost and defaults it to zero', function () {
+    actingAsOwner();
+
+    $id = $this->postJson('/api/v1/products', productPayload())->assertCreated()
+        ->assertJsonPath('data.additional_cost', '0.00')
+        ->json('data.id');
+
+    $this->patchJson("/api/v1/products/{$id}", ['additional_cost' => '20.5'])->assertOk()
+        ->assertJsonPath('data.additional_cost', '20.50');
+});
+
+it('refuses a negative additional cost', function () {
+    actingAsOwner();
+
+    $this->postJson('/api/v1/products', productPayload(['additional_cost' => '-1']))
+        ->assertJsonValidationErrors(['additional_cost']);
+});

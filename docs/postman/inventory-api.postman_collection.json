@@ -7844,6 +7844,287 @@
           ]
         }
       ]
+    },
+    {
+      "name": "Costs and profit hints",
+      "description": "additional_cost is the shop's own per-unit estimate (transport, loading). It is a selling aid only, never used in reports.",
+      "item": [
+        {
+          "name": "Staff do not see product costs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products",
+                "1"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.cost_price is not shown\", () => pm.expect(j[\"data\"]).to.not.have.property(\"cost_price\"));",
+                  "pm.test(\"data.additional_cost is not shown\", () => pm.expect(j[\"data\"]).to.not.have.property(\"additional_cost\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "The owner does",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products",
+                "1"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.additional_cost = \\\"20.00\\\"\", () => pm.expect(j[\"data\"][\"additional_cost\"]).to.eql(\"20.00\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Owner previews a sale below cost",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sales/preview",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sales",
+                "preview"
+              ]
+            },
+            "description": "estimated_profit = (price - cost - additional cost) x quantity. A warning only: the sale can still be saved.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"product_id\": 1,\n      \"quantity\": 2,\n      \"unit_price\": \"600.00\"\n    }\n  ],\n  \"payments\": [\n    {\n      \"account_id\": 1,\n      \"amount\": \"1200.00\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.items.0.below_cost = true\", () => pm.expect(j[\"data\"][\"items\"][0][\"below_cost\"]).to.eql(true));",
+                  "pm.test(\"data.items.0.additional_cost = \\\"20.00\\\"\", () => pm.expect(j[\"data\"][\"items\"][0][\"additional_cost\"]).to.eql(\"20.00\"));",
+                  "pm.test(\"data.problems = []\", () => pm.expect(j[\"data\"][\"problems\"]).to.eql([]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Staff get the warning without the numbers",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sales/preview",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sales",
+                "preview"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"product_id\": 1,\n      \"quantity\": 2,\n      \"unit_price\": \"600.00\"\n    }\n  ],\n  \"payments\": [\n    {\n      \"account_id\": 1,\n      \"amount\": \"1200.00\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.items.0.below_cost = true\", () => pm.expect(j[\"data\"][\"items\"][0][\"below_cost\"]).to.eql(true));",
+                  "pm.test(\"data.items.0.unit_cost is not shown\", () => pm.expect(j[\"data\"][\"items\"][0]).to.not.have.property(\"unit_cost\"));",
+                  "pm.test(\"data.estimated_profit is not shown\", () => pm.expect(j[\"data\"]).to.not.have.property(\"estimated_profit\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A normal price is not below cost",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/proformas/preview",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "proformas",
+                "preview"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{ownerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"product_id\": 2,\n      \"quantity\": 10\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.items.0.below_cost = false\", () => pm.expect(j[\"data\"][\"items\"][0][\"below_cost\"]).to.eql(false));",
+                  "pm.test(\"data.items.0.additional_cost = \\\"5.00\\\"\", () => pm.expect(j[\"data\"][\"items\"][0][\"additional_cost\"]).to.eql(\"5.00\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ]
 }

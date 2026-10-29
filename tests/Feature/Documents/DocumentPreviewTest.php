@@ -12,7 +12,7 @@ use App\Models\Supplier;
 it('previews a sale without saving anything', function () {
     actingAsOwner();
     $cement = Product::factory()->create(['sku' => 'CEM-50', 'selling_price' => '720.00', 'cost_price' => '650.00']);
-    $nails = Product::factory()->create(['selling_price' => '150.00']);
+    $nails = Product::factory()->create(['selling_price' => '150.00', 'cost_price' => '120.00', 'additional_cost' => '5.00']);
     StockMovement::factory()->for($cement)->create(['quantity' => 10]);
     StockMovement::factory()->for($nails)->create(['quantity' => 10]);
     $movements = StockMovement::count();
@@ -29,11 +29,14 @@ it('previews a sale without saving anything', function () {
         ->assertExactJson(['data' => [
             'items' => [
                 ['product_id' => $cement->id, 'product' => ['id' => $cement->id, 'sku' => 'CEM-50', 'name' => $cement->name],
-                    'quantity' => 2, 'unit_price' => '720.00', 'line_total' => '1440.00'],
+                    'quantity' => 2, 'unit_price' => '720.00', 'line_total' => '1440.00',
+                    'below_cost' => false, 'unit_cost' => '650.00', 'additional_cost' => '0.00', 'estimated_profit' => '140.00'],
                 ['product_id' => $nails->id, 'product' => ['id' => $nails->id, 'sku' => $nails->sku, 'name' => $nails->name],
-                    'quantity' => 3, 'unit_price' => '140.00', 'line_total' => '420.00'],
+                    'quantity' => 3, 'unit_price' => '140.00', 'line_total' => '420.00',
+                    'below_cost' => false, 'unit_cost' => '120.00', 'additional_cost' => '5.00', 'estimated_profit' => '45.00'],
             ],
             'total_amount' => '1860.00',
+            'estimated_profit' => '185.00',
             'paid_amount' => '1000.00',
             'balance_due' => '860.00',
             'payment_status' => 'partial',

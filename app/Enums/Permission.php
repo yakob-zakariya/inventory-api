@@ -19,6 +19,7 @@ enum Permission: string
     case ReportsView = 'reports.view';
     case UsersManage = 'users.manage';
     case SettingsManage = 'settings.manage';
+    case CostsView = 'costs.view';
 
     /**
      * What the permission allows, as shown in the role editor.
@@ -41,6 +42,7 @@ enum Permission: string
             self::ReportsView => 'See reports, balances, costs and the money ledger',
             self::UsersManage => 'Manage users and roles',
             self::SettingsManage => 'Edit the shop name and contact details printed on documents',
+            self::CostsView => 'See product costs, additional costs and estimated profit',
         };
     }
 
@@ -54,7 +56,7 @@ enum Permission: string
             self::PurchasesCreate, self::PurchasesVoid, self::SuppliersManage => 'Purchases',
             self::SalesCreate, self::SalesVoid, self::CustomersManage => 'Sales',
             self::PaymentsRecord, self::PaymentsVoid, self::ExpensesRecord, self::AccountsManage => 'Money',
-            self::ReportsView => 'Reports',
+            self::ReportsView, self::CostsView => 'Reports',
             self::UsersManage, self::SettingsManage => 'Administration',
         };
     }

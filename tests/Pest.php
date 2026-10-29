@@ -5,6 +5,7 @@ use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
+use Spatie\Permission\Models\Role;
 use Tests\ConcurrencyTestCase;
 use Tests\TestCase;
 
@@ -54,6 +55,20 @@ function actingAsOwner(): User
 function actingAsStaff(): User
 {
     $user = User::factory()->staff()->create();
+    Sanctum::actingAs($user);
+
+    return $user;
+}
+
+/**
+ * Authenticate as a new user whose custom role holds exactly the given permissions.
+ *
+ * @param  list<string>  $permissions
+ */
+function actingWithPermissions(array $permissions): User
+{
+    $user = User::factory()->create();
+    $user->assignRole(Role::findOrCreate('Custom', 'web')->syncPermissions($permissions));
     Sanctum::actingAs($user);
 
     return $user;

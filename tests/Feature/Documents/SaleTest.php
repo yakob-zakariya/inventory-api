@@ -245,3 +245,18 @@ it('forbids selling without sales.create and requires authentication', function 
     $this->getJson('/api/v1/sales')->assertOk();
     $this->postJson('/api/v1/sales', [])->assertForbidden();
 });
+
+it('shows the cost of sale items with costs.view, not with reports.view alone', function () {
+    actingAsOwner();
+    $cash = Account::factory()->create();
+    $id = $this->postJson('/api/v1/sales', [
+        'items' => [['product_id' => stockedProduct()->id, 'quantity' => 1]],
+        'payments' => [['account_id' => $cash->id, 'amount' => '720.00']],
+    ])->json('data.id');
+
+    actingWithPermissions(['costs.view']);
+    $this->getJson("/api/v1/sales/{$id}")->assertJsonPath('data.items.0.unit_cost', '650.00');
+
+    actingWithPermissions(['reports.view']);
+    $this->getJson("/api/v1/sales/{$id}")->assertJsonMissingPath('data.items.0.unit_cost');
+});

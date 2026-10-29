@@ -52,15 +52,15 @@ class DatabaseSeeder extends Seeder
 
         $products[] = Product::factory()->for($building)->create([
             'sku' => 'CEM-50', 'name' => 'Cement 50kg', 'unit' => 'bag',
-            'cost_price' => '650.00', 'selling_price' => '720.00', 'reorder_level' => 20,
+            'cost_price' => '650.00', 'selling_price' => '720.00', 'additional_cost' => '20.00', 'reorder_level' => 20,
         ]);
         $products[] = Product::factory()->for($building)->create([
             'sku' => 'NAIL-3', 'name' => 'Nails 3 inch', 'unit' => 'kg',
-            'cost_price' => '120.00', 'selling_price' => '150.00', 'reorder_level' => 10,
+            'cost_price' => '120.00', 'selling_price' => '150.00', 'additional_cost' => '5.00', 'reorder_level' => 10,
         ]);
         $products[] = Product::factory()->for($paint)->create([
             'sku' => 'PNT-W4', 'name' => 'White paint 4L', 'unit' => 'tin',
-            'cost_price' => '900.00', 'selling_price' => '1100.00', 'reorder_level' => 5,
+            'cost_price' => '900.00', 'selling_price' => '1100.00', 'additional_cost' => '30.00', 'reorder_level' => 5,
         ]);
 
         DB::transaction(function () use ($products) {

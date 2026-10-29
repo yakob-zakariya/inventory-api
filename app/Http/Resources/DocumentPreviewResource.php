@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Http\Resources\Concerns\ShowsProfitHints;
 use App\Services\DocumentProblem;
 use App\Services\PurchaseDraft;
 use App\Services\SaleDraft;
@@ -12,11 +13,14 @@ use Illuminate\Http\Resources\Json\JsonResource;
 /**
  * A priced, unsaved sale or purchase. Sale lines show unit_price, purchase lines unit_cost.
  * `problems` lists what would stop saving; empty means the document can be saved.
+ * Sale lines also carry profit hints (see ShowsProfitHints), which never stop saving.
  *
  * @property array{draft: SaleDraft|PurchaseDraft, problems: list<DocumentProblem>} $resource
  */
 class DocumentPreviewResource extends JsonResource
 {
+    use ShowsProfitHints;
+
     /**
      * Transform the resource into an array.
      *
@@ -25,7 +29,8 @@ class DocumentPreviewResource extends JsonResource
     public function toArray(Request $request): array
     {
         $draft = $this->resource['draft'];
-        $priceKey = $draft instanceof SaleDraft ? 'unit_price' : 'unit_cost';
+        $isSale = $draft instanceof SaleDraft;
+        $priceKey = $isSale ? 'unit_price' : 'unit_cost';
 
         return [
             'items' => array_map(fn (array $line) => [
@@ -34,8 +39,10 @@ class DocumentPreviewResource extends JsonResource
                 'quantity' => $line['quantity'],
                 $priceKey => Money::fromCents($line["{$priceKey}_cents"]),
                 'line_total' => Money::fromCents($line['quantity'] * $line["{$priceKey}_cents"]),
+                ...($isSale ? $this->profitHints($request, $line) : []),
             ], $draft->lines),
             'total_amount' => Money::fromCents($draft->totalCents),
+            ...($isSale ? $this->totalProfitHint($request, $draft) : []),
             'paid_amount' => Money::fromCents($draft->payments->totalCents),
             'balance_due' => Money::fromCents($draft->totalCents - $draft->payments->totalCents),
             'payment_status' => $draft->paymentStatus(),
