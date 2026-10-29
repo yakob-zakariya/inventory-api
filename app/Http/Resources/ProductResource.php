@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\Product;
+use App\Services\ImageStore;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -29,6 +30,7 @@ class ProductResource extends JsonResource
             'cost_price' => $this->cost_price,
             'selling_price' => $this->selling_price,
             'reorder_level' => $this->reorder_level,
+            'image_url' => ImageStore::url($this->image_path),
             'stock' => $this->when(
                 array_key_exists('stock', $this->getAttributes()),
                 fn () => (int) $this->stock,

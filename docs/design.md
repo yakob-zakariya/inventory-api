@@ -67,9 +67,9 @@ Every master data table also has `created_by` (nullable, the user who created th
 - `categories`: name (unique), description.
 - `suppliers`: name, contact_person, phone, email, address, deleted_at.
 - `customers`: name, phone (unique when present), address, deleted_at.
-- `products`: category_id, sku (unique), name, description, unit (text label such as "bag"), cost_price, selling_price, reorder_level (integer), deleted_at.
+- `products`: category_id, sku (unique), name, description, unit (text label such as "bag"), cost_price, selling_price, reorder_level (integer), image_path (nullable, one photo), deleted_at.
 - `accounts`: name (unique), type (cash, bank, mobile_money), opening_balance, is_active. Accounts are never deleted, only deactivated. `opening_balance` may be negative (an account that starts overdrawn) and is fixed once the account is created; a wrong opening balance is corrected with an `adjustment` transaction.
-- `shop_settings`: one row with name, address, phone, email, tin, printed on documents. The migration creates it from the `SHOP_*` environment values; after that the shop edits it in the app. The currency is not stored: it comes from `SHOP_CURRENCY` and is fixed at installation, because amounts are never converted.
+- `shop_settings`: one row with name, address, phone, email, tin, logo_path, printed on documents. The migration creates it from the `SHOP_*` environment values; after that the shop edits it in the app. The currency is not stored: it comes from `SHOP_CURRENCY` and is fixed at installation, because amounts are never converted.
 
 ### Documents
 - `purchases`: number (unique, for example PUR-000123), supplier_id, invoice_number, purchase_date, total_amount, note, status (active, voided), voided_at, voided_by, void_reason, created_by.
@@ -148,6 +148,7 @@ If reports ever become slow, cached columns may be added, but only alongside the
 
 14. Proformas: made out to a registered customer or a typed name. `valid_until` (default 7 days) is not before the proforma date. No stock check while quoting. Editable (items replace the list, the total is recalculated) and cancellable (reason required) only while open and not expired; otherwise 409.
 15. Converting a proforma creates one sale through the normal sale rules (stock, walk-in must pay in full, payments within the total) at the quoted prices, with costs copied at that moment. Quantities may be lowered and items left out; adding items or raising prices is refused. An expired proforma cannot be converted (422); a converted or cancelled one returns 409. Locks: the proforma and its items first (with locking reads, so MySQL's snapshot is not fixed before the stock check), then the products, the sequence and the accounts as for any sale. Nothing locks a proforma after products, so this order cannot deadlock. The proforma keeps its link to the sale even if the sale is voided later.
+16. Images (product photos, the shop logo) are JPG, PNG or WebP up to 2 MB, one per product or shop. They are stored on the public disk under random names, so anyone with the exact URL can see them; they are not secret. Replacing or removing an image deletes the old file once the database change is saved. A deleted product keeps its photo. Uploads use their own `POST` endpoints because PHP does not parse multipart bodies on `PATCH`. Backups must include `storage/app/public`.
 
 ## 9. Core flows
 
@@ -180,6 +181,8 @@ Prefix `/api/v1`. All routes except login need a Sanctum token. Permissions are 
   - Cookie sessions only work for origins listed in `SANCTUM_STATEFUL_DOMAINS` (derived from `FRONTEND_URL` when unset). CORS allows only `FRONTEND_URL`, with credentials. In production the web app and the API share a parent domain (for example `app.shop.com` and `api.shop.com`, with `SESSION_DOMAIN=.shop.com` and `SESSION_SECURE_COOKIE=true`).
 - Users: list and create (`users.manage`). There is no public registration.
 - Master data CRUD: categories, suppliers, customers, products, accounts.
+- Images: `POST`/`DELETE /products/{id}/image` (`products.manage`), `POST`/`DELETE /shop/logo` (`settings.manage`). Responses carry `image_url` and `logo_url` (null when missing).
+- Price list: `GET /price-list` for any logged-in user, to print for customers. Products grouped by category (sorted by category, then product name), each with name, unit, selling price, `image_url` and `available` (stock above zero). Never cost or stock numbers, never deleted products. Filters `category_id`, `available=1`. Not paginated.
 - Stock: `GET /stock-movements` (filters: product, type), `POST /stock-adjustments`.
 - Purchases: `GET /purchases`, `GET /purchases/{id}`, `POST /purchases`, `POST /purchases/preview`, `PATCH /purchases/{id}`, `POST /purchases/{id}/void`.
 - Sales: `GET /sales`, `GET /sales/{id}`, `POST /sales`, `POST /sales/preview`, `PATCH /sales/{id}`, `POST /sales/{id}/void`.

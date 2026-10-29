@@ -2,6 +2,8 @@
 
 use App\Models\ShopSetting;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\Models\Role;
 
@@ -74,4 +76,41 @@ it('refuses to change the currency', function () {
 
 it('starts from the SHOP_* environment values', function () {
     expect(ShopSetting::current()->name)->toBe(config('shop.name'));
+});
+
+it('uploads, replaces and removes the logo', function () {
+    Storage::fake('public');
+    actingAsOwner();
+
+    $this->post('/api/v1/shop/logo', ['image' => UploadedFile::fake()->image('logo.png')], ['Accept' => 'application/json'])
+        ->assertOk();
+    $firstPath = ShopSetting::current()->logo_path;
+    expect($firstPath)->toStartWith('shop/');
+    $this->getJson('/api/v1/shop')->assertJsonPath('data.logo_url', Storage::disk('public')->url($firstPath));
+
+    $this->post('/api/v1/shop/logo', ['image' => UploadedFile::fake()->image('logo.webp')], ['Accept' => 'application/json'])
+        ->assertOk();
+    Storage::disk('public')->assertMissing($firstPath);
+    $secondPath = ShopSetting::current()->logo_path;
+
+    $this->deleteJson('/api/v1/shop/logo')->assertNoContent();
+    Storage::disk('public')->assertMissing($secondPath);
+    $this->getJson('/api/v1/shop')->assertJsonPath('data.logo_url', null);
+});
+
+it('checks the logo file like any image', function () {
+    Storage::fake('public');
+    actingAsOwner();
+
+    $this->post('/api/v1/shop/logo', ['image' => UploadedFile::fake()->image('logo.gif')], ['Accept' => 'application/json'])
+        ->assertJsonValidationErrors(['image' => 'The image must be a JPG, PNG or WebP file.']);
+});
+
+it('needs settings.manage to change the logo', function () {
+    Storage::fake('public');
+    actingAsStaff();
+
+    $this->post('/api/v1/shop/logo', ['image' => UploadedFile::fake()->image('logo.png')], ['Accept' => 'application/json'])
+        ->assertForbidden();
+    $this->deleteJson('/api/v1/shop/logo')->assertForbidden();
 });

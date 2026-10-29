@@ -11,13 +11,16 @@ use App\Http\Controllers\Api\V1\ExpenseController;
 use App\Http\Controllers\Api\V1\OwnerEntryController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\PermissionController;
+use App\Http\Controllers\Api\V1\PriceListController;
 use App\Http\Controllers\Api\V1\ProductController;
+use App\Http\Controllers\Api\V1\ProductImageController;
 use App\Http\Controllers\Api\V1\ProformaController;
 use App\Http\Controllers\Api\V1\PurchaseController;
 use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\RoleController;
 use App\Http\Controllers\Api\V1\SaleController;
 use App\Http\Controllers\Api\V1\ShopController;
+use App\Http\Controllers\Api\V1\ShopLogoController;
 use App\Http\Controllers\Api\V1\StockAdjustmentController;
 use App\Http\Controllers\Api\V1\StockMovementController;
 use App\Http\Controllers\Api\V1\SupplierController;
@@ -40,9 +43,11 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::delete('auth/session', [AuthController::class, 'endSession'])->name('auth.session.destroy');
         Route::get('auth/me', [AuthController::class, 'me'])->name('auth.me');
         Route::get('shop', [ShopController::class, 'show'])->name('shop.show');
-        Route::patch('shop', [ShopController::class, 'update'])
-            ->middleware('permission:'.Permission::SettingsManage->value)
-            ->name('shop.update');
+        Route::middleware('permission:'.Permission::SettingsManage->value)->group(function () {
+            Route::patch('shop', [ShopController::class, 'update'])->name('shop.update');
+            Route::post('shop/logo', [ShopLogoController::class, 'store'])->name('shop.logo.store');
+            Route::delete('shop/logo', [ShopLogoController::class, 'destroy'])->name('shop.logo.destroy');
+        });
         Route::post('auth/password', [AuthController::class, 'changePassword'])->name('auth.password');
 
         Route::middleware('permission:'.Permission::UsersManage->value)->group(function () {
@@ -57,6 +62,7 @@ Route::prefix('v1')->name('v1.')->group(function () {
         // Master data: any logged-in user can read, writes need the matching permission.
         Route::apiResource('categories', CategoryController::class)->only(['index', 'show']);
         Route::apiResource('products', ProductController::class)->only(['index', 'show']);
+        Route::get('price-list', PriceListController::class)->name('price-list');
         Route::apiResource('suppliers', SupplierController::class)->only(['index', 'show']);
         Route::apiResource('customers', CustomerController::class)->only(['index', 'show']);
         Route::apiResource('accounts', AccountController::class)->only(['index', 'show']);
@@ -64,6 +70,8 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::middleware('permission:'.Permission::ProductsManage->value)->group(function () {
             Route::apiResource('categories', CategoryController::class)->except(['index', 'show']);
             Route::apiResource('products', ProductController::class)->except(['index', 'show']);
+            Route::post('products/{product}/image', [ProductImageController::class, 'store'])->name('products.image.store');
+            Route::delete('products/{product}/image', [ProductImageController::class, 'destroy'])->name('products.image.destroy');
         });
 
         Route::middleware('permission:'.Permission::SuppliersManage->value)->group(function () {

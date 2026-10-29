@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\ShopSetting;
+use App\Services\ImageStore;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -24,6 +25,7 @@ class ShopResource extends JsonResource
             'phone' => $this->phone,
             'email' => $this->email,
             'tin' => $this->tin,
+            'logo_url' => ImageStore::url($this->logo_path),
             'currency' => config('shop.currency'),
             'updated_at' => $this->updated_at,
         ];

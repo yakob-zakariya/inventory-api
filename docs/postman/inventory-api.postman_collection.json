@@ -7156,7 +7156,61 @@
                   "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
                   "const j = pm.response.json();",
                   "pm.test(\"data.phone = \\\"0911 000000\\\"\", () => pm.expect(j[\"data\"][\"phone\"]).to.eql(\"0911 000000\"));",
-                  "pm.test(\"data.currency = \\\"ETB\\\"\", () => pm.expect(j[\"data\"][\"currency\"]).to.eql(\"ETB\"));"
+                  "pm.test(\"data.currency = \\\"ETB\\\"\", () => pm.expect(j[\"data\"][\"currency\"]).to.eql(\"ETB\"));",
+                  "pm.test(\"data.logo_url = null\", () => pm.expect(j[\"data\"][\"logo_url\"]).to.eql(null));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Price list for a customer",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/price-list?available=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "price-list"
+              ],
+              "query": [
+                {
+                  "key": "available",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Grouped by category; no cost or stock numbers. Photos and the logo are uploaded as files, covered by the automated tests.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staffToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"data.0.name = \\\"Building materials\\\"\", () => pm.expect(j[\"data\"][0][\"name\"]).to.eql(\"Building materials\"));",
+                  "pm.test(\"data.0.products.0.name = \\\"Cement 50kg\\\"\", () => pm.expect(j[\"data\"][0][\"products\"][0][\"name\"]).to.eql(\"Cement 50kg\"));",
+                  "pm.test(\"data.0.products.0.available = true\", () => pm.expect(j[\"data\"][0][\"products\"][0][\"available\"]).to.eql(true));"
                 ]
               }
             }
