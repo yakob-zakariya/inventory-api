@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\V1\OwnerEntryController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\PermissionController;
 use App\Http\Controllers\Api\V1\ProductController;
+use App\Http\Controllers\Api\V1\ProductImageController;
 use App\Http\Controllers\Api\V1\ProformaController;
 use App\Http\Controllers\Api\V1\PurchaseController;
 use App\Http\Controllers\Api\V1\ReportController;
@@ -64,6 +65,8 @@ Route::prefix('v1')->name('v1.')->group(function () {
         Route::middleware('permission:'.Permission::ProductsManage->value)->group(function () {
             Route::apiResource('categories', CategoryController::class)->except(['index', 'show']);
             Route::apiResource('products', ProductController::class)->except(['index', 'show']);
+            Route::post('products/{product}/image', [ProductImageController::class, 'store'])->name('products.image.store');
+            Route::delete('products/{product}/image', [ProductImageController::class, 'destroy'])->name('products.image.destroy');
         });
 
         Route::middleware('permission:'.Permission::SuppliersManage->value)->group(function () {
