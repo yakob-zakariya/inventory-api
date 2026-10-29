@@ -360,6 +360,20 @@ FOLDERS = [
        body={"note": "x"}, checks={"message": "PRF-000002 is cancelled."}),
   step("Converted proformas", "GET", "/proformas?status=converted", OWNER, checks={"data.0.number": "PRF-000001"}),
  ]),
+ ("Costs and profit hints", "additional_cost is the shop's own per-unit estimate (transport, loading). It is a selling aid only, never used in reports.", [
+  step("Staff do not see product costs", "GET", "/products/1", STAFF, checks={"data.cost_price": MISSING, "data.additional_cost": MISSING}),
+  step("The owner does", "GET", "/products/1", OWNER, checks={"data.additional_cost": "20.00"}),
+  step("Owner previews a sale below cost", "POST", "/sales/preview", OWNER,
+       body={"items": [{"product_id": 1, "quantity": 2, "unit_price": "600.00"}], "payments": [{"account_id": 1, "amount": "1200.00"}]},
+       checks={"data.items.0.below_cost": True, "data.items.0.additional_cost": "20.00", "data.problems": []},
+       note="estimated_profit = (price - cost - additional cost) x quantity. A warning only: the sale can still be saved."),
+  step("Staff get the warning without the numbers", "POST", "/sales/preview", STAFF,
+       body={"items": [{"product_id": 1, "quantity": 2, "unit_price": "600.00"}], "payments": [{"account_id": 1, "amount": "1200.00"}]},
+       checks={"data.items.0.below_cost": True, "data.items.0.unit_cost": MISSING, "data.estimated_profit": MISSING}),
+  step("A normal price is not below cost", "POST", "/proformas/preview", OWNER,
+       body={"items": [{"product_id": 2, "quantity": 10}]},
+       checks={"data.items.0.below_cost": False, "data.items.0.additional_cost": "5.00"}),
+ ]),
 ]
 
 def split_path(path):
