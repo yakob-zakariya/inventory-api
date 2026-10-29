@@ -68,4 +68,25 @@ final readonly class SaleDraft
     {
         return PaymentStatus::forCents($this->payments->totalCents, $this->totalCents);
     }
+
+    /**
+     * A line's estimated profit: (price - cost - the product's additional cost) x quantity.
+     * A selling aid only; reports use real costs and recorded expenses.
+     *
+     * @param  array{product: Product, quantity: int, unit_price_cents: int, unit_cost_cents: int}  $line
+     */
+    public static function estimatedProfitCents(array $line): int
+    {
+        $additionalCents = Money::toCents($line['product']->additional_cost);
+
+        return $line['quantity'] * ($line['unit_price_cents'] - $line['unit_cost_cents'] - $additionalCents);
+    }
+
+    /**
+     * The estimated profit of all lines.
+     */
+    public function totalEstimatedProfitCents(): int
+    {
+        return array_sum(array_map(self::estimatedProfitCents(...), $this->lines));
+    }
 }
