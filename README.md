@@ -17,13 +17,13 @@ php artisan key:generate
 touch database/database.sqlite
 php artisan migrate --seed          # demo data: owner@example.com and staff@example.com, password "password"
 php artisan storage:link
-php artisan serve                   # http://localhost:8000
+php artisan serve                   # serves http://localhost:8000
 ```
 
 ## Commands you will use
 
 | Command | What it does |
-|---------|--------------|
+| --- | --- |
 | `php artisan test --compact` | Run the tests. |
 | `docker compose up -d mysql-test` then `php artisan test --compact --group=mysql` | Run the concurrency tests on a real MySQL. |
 | `vendor/bin/pint` | Format the code. |
@@ -36,7 +36,7 @@ php artisan serve                   # http://localhost:8000
 
 - [docs/design.md](docs/design.md): data model, business rules, permissions, API overview.
 - [docs/deployment.md](docs/deployment.md): setting up the server, updating, and restoring a backup.
-- API reference: run `php artisan serve` and open http://localhost:8000/docs/api (local only).
+- API reference: run `php artisan serve` and open <http://localhost:8000/docs/api> (local only).
 - [docs/postman](docs/postman): a Postman collection that walks through every feature on the demo data.
 
 Every push runs the code style check and both test suites on GitHub Actions.
